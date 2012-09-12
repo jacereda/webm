@@ -2,7 +2,7 @@ package webm
 
 import (
 	"bufio"
-	"ebml/ebml"
+	"code.google.com/p/ebml-go/ebml"
 	"testing"
 	"os"
 )
