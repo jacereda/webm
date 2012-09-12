@@ -3,13 +3,13 @@ package webm
 import (
 	"bufio"
 	"code.google.com/p/ebml-go/ebml"
-	"testing"
 	"os"
+	"testing"
 )
 
 func TestReadStruct(t *testing.T) {
 	path := "/Users/jacereda/Downloads/big-buck-bunny_trailer.webm"
-	r,err := os.Open(path)
+	r, err := os.Open(path)
 	if err != nil {
 		t.Fatal("unable to open file " + path)
 	}
