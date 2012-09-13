@@ -33,12 +33,12 @@ type Tracks struct {
 
 type TrackEntry struct {
 	TrackNumber     uint   `ebml:"D7"`
-	TrackUID        uint   `ebml:"73C5"`
+	TrackUID        uint64 `ebml:"73C5"`
 	TrackType       uint   `ebml:"83"`
 	FlagEnabled     uint   `ebml:"B9"`
 	FlagDefault     uint   `ebml:"88"`
 	FlagForced      uint   `ebml:"55AA"`
-	DefaultDuration uint   `ebml:"23E383"`
+	DefaultDuration uint64 `ebml:"23E383"`
 	Name            string `ebml:"536E"`
 	Language        string `ebml:"22B59C"`
 	CodecID         string `ebml:"86"`
@@ -64,8 +64,8 @@ type Video struct {
 }
 
 type Audio struct {
-	SamplingFrequency       float32 `ebml:"B5"`
-	OutputSamplingFrequency float32 `ebml:"78B5"`
+	SamplingFrequency       float64 `ebml:"B5"`
+	OutputSamplingFrequency float64 `ebml:"78B5"`
 	Channels                uint    `ebml:"9F"`
 	BitDepth                uint    `ebml:"6264"`
 }
@@ -81,7 +81,7 @@ type Seek struct {
 
 type SegmentInformation struct {
 	TimecodeScale uint    `ebml:"2AD7B1"`
-	Duration      float32 `ebml:"4489"`
+	Duration      float64 `ebml:"4489"`
 	DateUTC       []byte  `ebml:"4461"`
 	MuxingApp     string  `ebml:"4D80"`
 	WritingApp    string  `ebml:"5741"`
