@@ -76,7 +76,7 @@ type SeekHead struct {
 
 type Seek struct {
 	SeekID       []byte `ebml:"53AB"`
-	SeekPosition uint   `ebml:"53AC"`
+	SeekPosition uint64 `ebml:"53AC"`
 }
 
 type SegmentInformation struct {
