@@ -2,7 +2,6 @@ package webm
 
 import (
 	"bufio"
-	"code.google.com/p/ebml-go/ebml"
 	"os"
 	"testing"
 )
@@ -13,8 +12,14 @@ func TestReadStruct(t *testing.T) {
 	if err != nil {
 		t.Fatal("unable to open file " + path)
 	}
-	br := bufio.NewReader(r)
 	var w WebM
-	err = ebml.Read(br, &w)
-	t.Logf("%v\n%+v\n", err, w)
+	br := bufio.NewReader(r)
+	var id uint
+	id, err = Parse(br, &w)
+	t.Logf("%+v\n%v\n", w, err)
+	for false && err == nil {
+		var d []byte
+		d,err = Next(br, id)
+		t.Log("SLICE: ", d)
+	}
 }

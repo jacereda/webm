@@ -4,6 +4,12 @@
 
 package webm
 
+import (
+	"code.google.com/p/ebml-go/ebml"
+	"io"
+)
+
+
 type WebM struct {
 	Header  `ebml:"1a45dfa3"`
 	Segment `ebml:"18538067"`
@@ -88,6 +94,7 @@ type SegmentInformation struct {
 }
 
 type Cluster struct {
+	simpleBlock []byte      `ebml:"A3" ebmlstop:"1"`
 	Timecode   uint         `ebml:"E7"`
 	PrevSize   uint         `ebml:"AB"`
 	Position   uint         `ebml:"A7"`
@@ -95,6 +102,7 @@ type Cluster struct {
 }
 
 type BlockGroup struct {
+	block []byte            `ebml:"A1" ebmlstop:"1"`
 	BlockDuration  uint     `ebml:"9B"`
 	ReferenceBlock int      `ebml:"FB"`
 	CodecState     []byte   `ebml:"A4"`
@@ -122,4 +130,30 @@ type CueTrackPositions struct {
 	CueTrack           uint `ebml:"F7"`
 	CueClusterPosition uint `ebml:"F1"`
 	CueBlockNumber     uint `ebml:"5378"`
+}
+
+
+func Parse(r io.Reader, m *WebM) (id uint, err error) {
+	err = ebml.Read(r, m)
+	if err == ebml.ReachedPayloadError(0xa1) || 
+		err == ebml.ReachedPayloadError(0xa3) {
+		id = uint(err.(ebml.ReachedPayloadError))
+		err = nil
+	}
+	return
+}
+
+func Next(r io.Reader, id uint) (d []byte, err error) {
+	d, err = ebml.ReadData(r)
+	if err != nil {
+		return
+	}
+	nid, err := ebml.ReadID(r)
+	if err != nil {
+		return
+	}
+	if nid != id {
+		err = ebml.Locate(r, id)
+	}
+	return
 }
