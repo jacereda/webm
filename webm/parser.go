@@ -5,121 +5,121 @@
 package webm
 
 type WebM struct {
-	Header  `id:"1a45dfa3"`
-	Segment `id:"18538067"`
+	Header  `ebml:"1a45dfa3"`
+	Segment `ebml:"18538067"`
 }
 
 type Header struct {
-	EBMLVersion        uint   `id:"4286"`
-	EBMLReadVersion    uint   `id:"42f7"`
-	EBMLMaxIDLength    uint   `id:"42f2"`
-	EBMLMaxSizeLength  uint   `id:"42f3"`
-	DocType            string `id:"4282"`
-	DocTypeVersion     uint   `id:"4287"`
-	DocTypeReadVersion uint   `id:"4285"`
+	EBMLVersion        uint   `ebml:"4286"`
+	EBMLReadVersion    uint   `ebml:"42f7"`
+	EBMLMaxIDLength    uint   `ebml:"42f2"`
+	EBMLMaxSizeLength  uint   `ebml:"42f3"`
+	DocType            string `ebml:"4282"`
+	DocTypeVersion     uint   `ebml:"4287"`
+	DocTypeReadVersion uint   `ebml:"4285"`
 }
 
 type Segment struct {
-	SeekHead           `id:"114D9B74"`
-	SegmentInformation `id:"1549A966"`
-	Tracks             `id:"1654AE6B"`
-	Cluster            `id:"1F43B675"`
-	Cues               `id:"1C53BB6B"`
+	SeekHead           `ebml:"114D9B74"`
+	SegmentInformation `ebml:"1549A966"`
+	Tracks             `ebml:"1654AE6B"`
+	Cluster            `ebml:"1F43B675"`
+	Cues               `ebml:"1C53BB6B"`
 }
 
 type Tracks struct {
-	TrackEntry []TrackEntry `id:"AE"`
+	TrackEntry []TrackEntry `ebml:"AE"`
 }
 
 type TrackEntry struct {
-	TrackNumber     uint   `id:"D7"`
-	TrackUID        uint   `id:"73C5"`
-	TrackType       uint   `id:"83"`
-	FlagEnabled     uint   `id:"B9"`
-	FlagDefault     uint   `id:"88"`
-	FlagForced      uint   `id:"55AA"`
-	DefaultDuration uint   `id:"23E383"`
-	Name            string `id:"536E"`
-	Language        string `id:"22B59C"`
-	CodecID         string `id:"86"`
-	CodecPrivate    []byte `id:"63A2"`
-	CodecName       string `id:"258688"`
-	Video           `id:"E0"`
-	Audio           `id:"E1"`
+	TrackNumber     uint   `ebml:"D7"`
+	TrackUID        uint   `ebml:"73C5"`
+	TrackType       uint   `ebml:"83"`
+	FlagEnabled     uint   `ebml:"B9"`
+	FlagDefault     uint   `ebml:"88"`
+	FlagForced      uint   `ebml:"55AA"`
+	DefaultDuration uint   `ebml:"23E383"`
+	Name            string `ebml:"536E"`
+	Language        string `ebml:"22B59C"`
+	CodecID         string `ebml:"86"`
+	CodecPrivate    []byte `ebml:"63A2"`
+	CodecName       string `ebml:"258688"`
+	Video           `ebml:"E0"`
+	Audio           `ebml:"E1"`
 }
 
 type Video struct {
-	FlagInterlaced  uint `id:"9A"`
-	StereoMode      uint `id:"53B8"`
-	PixelWidth      uint `id:"B0"`
-	PixelHeight     uint `id:"BA"`
-	PixelCropBottom uint `id:"54AA"`
-	PixelCropTop    uint `id:"54BB"`
-	PixelCropLeft   uint `id:"54CC"`
-	PixelCropRight  uint `id:"54DD"`
-	DisplayWidth    uint `id:"54B0"`
-	DisplayHeight   uint `id:"54BA"`
-	DisplayUnit     uint `id:"54B2"`
-	AspectRatioType uint `id:"54B3"`
+	FlagInterlaced  uint `ebml:"9A"`
+	StereoMode      uint `ebml:"53B8"`
+	PixelWidth      uint `ebml:"B0"`
+	PixelHeight     uint `ebml:"BA"`
+	PixelCropBottom uint `ebml:"54AA"`
+	PixelCropTop    uint `ebml:"54BB"`
+	PixelCropLeft   uint `ebml:"54CC"`
+	PixelCropRight  uint `ebml:"54DD"`
+	DisplayWidth    uint `ebml:"54B0"`
+	DisplayHeight   uint `ebml:"54BA"`
+	DisplayUnit     uint `ebml:"54B2"`
+	AspectRatioType uint `ebml:"54B3"`
 }
 
 type Audio struct {
-	SamplingFrequency       float32 `id:"B5"`
-	OutputSamplingFrequency float32 `id:"78B5"`
-	Channels                uint    `id:"9F"`
-	BitDepth                uint    `id:"6264"`
+	SamplingFrequency       float32 `ebml:"B5"`
+	OutputSamplingFrequency float32 `ebml:"78B5"`
+	Channels                uint    `ebml:"9F"`
+	BitDepth                uint    `ebml:"6264"`
 }
 
 type SeekHead struct {
-	Seek []Seek `id:"4DBB"`
+	Seek []Seek `ebml:"4DBB"`
 }
 
 type Seek struct {
-	SeekID       []byte `id:"53AB"`
-	SeekPosition uint   `id:"53AC"`
+	SeekID       []byte `ebml:"53AB"`
+	SeekPosition uint   `ebml:"53AC"`
 }
 
 type SegmentInformation struct {
-	TimecodeScale uint    `id:"2AD7B1"`
-	Duration      float32 `id:"4489"`
-	DateUTC       []byte  `id:"4461"`
-	MuxingApp     string  `id:"4D80"`
-	WritingApp    string  `id:"5741"`
+	TimecodeScale uint    `ebml:"2AD7B1"`
+	Duration      float32 `ebml:"4489"`
+	DateUTC       []byte  `ebml:"4461"`
+	MuxingApp     string  `ebml:"4D80"`
+	WritingApp    string  `ebml:"5741"`
 }
 
 type Cluster struct {
-	Timecode   uint         `id:"E7"`
-	PrevSize   uint         `id:"AB"`
-	Position   uint         `id:"A7"`
-	BlockGroup []BlockGroup `id:"A0"`
+	Timecode   uint         `ebml:"E7"`
+	PrevSize   uint         `ebml:"AB"`
+	Position   uint         `ebml:"A7"`
+	BlockGroup []BlockGroup `ebml:"A0"`
 }
 
 type BlockGroup struct {
-	BlockDuration  uint     `id:"9B"`
-	ReferenceBlock int      `id:"FB"`
-	CodecState     []byte   `id:"A4"`
-	Slices         []Slices `id:"8E"`
+	BlockDuration  uint     `ebml:"9B"`
+	ReferenceBlock int      `ebml:"FB"`
+	CodecState     []byte   `ebml:"A4"`
+	Slices         []Slices `ebml:"8E"`
 }
 
 type Slices struct {
-	TimeSlice []TimeSlice `id:"E8"`
+	TimeSlice []TimeSlice `ebml:"E8"`
 }
 
 type TimeSlice struct {
-	LaceNumber uint `id:"CC"`
+	LaceNumber uint `ebml:"CC"`
 }
 
 type Cues struct {
-	CuePoint []CuePoint `id:"BB"`
+	CuePoint []CuePoint `ebml:"BB"`
 }
 
 type CuePoint struct {
-	CueTime           uint                `id:"B3"`
-	CueTrackPositions []CueTrackPositions `id:"B7"`
+	CueTime           uint                `ebml:"B3"`
+	CueTrackPositions []CueTrackPositions `ebml:"B7"`
 }
 
 type CueTrackPositions struct {
-	CueTrack           uint `id:"F7"`
-	CueClusterPosition uint `id:"F1"`
-	CueBlockNumber     uint `id:"5378"`
+	CueTrack           uint `ebml:"F7"`
+	CueClusterPosition uint `ebml:"F1"`
+	CueBlockNumber     uint `ebml:"5378"`
 }
