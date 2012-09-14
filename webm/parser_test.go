@@ -20,7 +20,7 @@ func TestReadStruct(t *testing.T) {
 	for err == nil {
 //		var d []byte
 //		d,err = e.ReadData()
-		t.Log("SLICE: ", e.Id, e.Size())
+		t.Log("Packet: ", e.Id, e.Size())
 		_,err = e.ReadData()
 		e,err = rest.Next()
 
