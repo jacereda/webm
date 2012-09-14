@@ -14,12 +14,15 @@ func TestReadStruct(t *testing.T) {
 	}
 	var w WebM
 	br := bufio.NewReader(r)
-	var id uint
-	id, err = Parse(br, &w)
-	t.Logf("%+v\n%v\n", w, err)
-	for false && err == nil {
-		var d []byte
-		d,err = Next(br, id)
-		t.Log("SLICE: ", d)
+	e, rest, err := Parse(br, &w)
+	t.Log("Duration: ", w.Segment.GetDuration())
+	t.Logf("%+v\n%v %v\n", w, err, e)
+	for err == nil {
+//		var d []byte
+//		d,err = e.ReadData()
+		t.Log("SLICE: ", e.Id, e.Size())
+		_,err = e.ReadData()
+		e,err = rest.Next()
+
 	}
 }

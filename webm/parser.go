@@ -9,7 +9,6 @@ import (
 	"io"
 )
 
-
 type WebM struct {
 	Header  `ebml:"1a45dfa3"`
 	Segment `ebml:"18538067"`
@@ -93,6 +92,10 @@ type SegmentInformation struct {
 	WritingApp    string  `ebml:"5741"`
 }
 
+func (s *SegmentInformation) GetDuration() float64 {
+	return s.Duration * float64(s.TimecodeScale) / 1000000000
+}
+
 type Cluster struct {
 	simpleBlock []byte      `ebml:"A3" ebmlstop:"1"`
 	Timecode   uint         `ebml:"E7"`
@@ -132,28 +135,16 @@ type CueTrackPositions struct {
 	CueBlockNumber     uint `ebml:"5378"`
 }
 
-
-func Parse(r io.Reader, m *WebM) (id uint, err error) {
-	err = ebml.Read(r, m)
-	if err == ebml.ReachedPayloadError(0xa1) || 
-		err == ebml.ReachedPayloadError(0xa3) {
-		id = uint(err.(ebml.ReachedPayloadError))
+func Parse(r io.Reader, m *WebM) (first *ebml.Element, rest *ebml.Element, err error) {
+	var e *ebml.Element
+	e,err = ebml.RootElement(r)
+	if err == nil {
+		err = e.Unmarshal(m)
+	}
+	if err.Error() == "Reached payload" {
+		first = err.(ebml.ReachedPayloadError).E
+		rest =  err.(ebml.ReachedPayloadError).P
 		err = nil
-	}
-	return
-}
-
-func Next(r io.Reader, id uint) (d []byte, err error) {
-	d, err = ebml.ReadData(r)
-	if err != nil {
-		return
-	}
-	nid, err := ebml.ReadID(r)
-	if err != nil {
-		return
-	}
-	if nid != id {
-		err = ebml.Locate(r, id)
 	}
 	return
 }
