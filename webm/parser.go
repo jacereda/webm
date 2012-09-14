@@ -142,8 +142,8 @@ func Parse(r io.Reader, m *WebM) (first *ebml.Element, rest *ebml.Element, err e
 		err = e.Unmarshal(m)
 	}
 	if err.Error() == "Reached payload" {
-		first = err.(ebml.ReachedPayloadError).E
-		rest =  err.(ebml.ReachedPayloadError).P
+		first = err.(ebml.ReachedPayloadError).First
+		rest =  err.(ebml.ReachedPayloadError).Rest
 		err = nil
 	}
 	return
