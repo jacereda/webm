@@ -97,15 +97,15 @@ func (s *SegmentInformation) GetDuration() float64 {
 }
 
 type Cluster struct {
-	simpleBlock []byte      `ebml:"A3" ebmlstop:"1"`
-	Timecode   uint         `ebml:"E7"`
-	PrevSize   uint         `ebml:"AB"`
-	Position   uint         `ebml:"A7"`
-	BlockGroup []BlockGroup `ebml:"A0"`
+	simpleBlock []byte       `ebml:"A3" ebmlstop:"1"`
+	Timecode    uint         `ebml:"E7"`
+	PrevSize    uint         `ebml:"AB"`
+	Position    uint         `ebml:"A7"`
+	BlockGroup  []BlockGroup `ebml:"A0"`
 }
 
 type BlockGroup struct {
-	block []byte            `ebml:"A1" ebmlstop:"1"`
+	block          []byte   `ebml:"A1" ebmlstop:"1"`
 	BlockDuration  uint     `ebml:"9B"`
 	ReferenceBlock int      `ebml:"FB"`
 	CodecState     []byte   `ebml:"A4"`
@@ -137,13 +137,13 @@ type CueTrackPositions struct {
 
 func Parse(r io.Reader, m *WebM) (first *ebml.Element, rest *ebml.Element, err error) {
 	var e *ebml.Element
-	e,err = ebml.RootElement(r)
+	e, err = ebml.RootElement(r)
 	if err == nil {
 		err = e.Unmarshal(m)
 	}
 	if err.Error() == "Reached payload" {
 		first = err.(ebml.ReachedPayloadError).First
-		rest =  err.(ebml.ReachedPayloadError).Rest
+		rest = err.(ebml.ReachedPayloadError).Rest
 		err = nil
 	}
 	return
