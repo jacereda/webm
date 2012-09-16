@@ -64,15 +64,15 @@ type Video struct {
 	PixelCropTop    uint `ebml:"54BB" ebmldef:"0"`
 	PixelCropLeft   uint `ebml:"54CC" ebmldef:"0"`
 	PixelCropRight  uint `ebml:"54DD" ebmldef:"0"`
-	DisplayWidth    uint `ebml:"54B0"`
-	DisplayHeight   uint `ebml:"54BA"`
+	DisplayWidth    uint `ebml:"54B0" ebmldeflink:"PixelWidth"`
+	DisplayHeight   uint `ebml:"54BA" ebmldeflink:"PixelHeight"`
 	DisplayUnit     uint `ebml:"54B2" ebmldef:"0"`
 	AspectRatioType uint `ebml:"54B3" ebmldef:"0"`
 }
 
 type Audio struct {
 	SamplingFrequency       float64 `ebml:"B5" ebmldef:"8000.0"`
-	OutputSamplingFrequency float64 `ebml:"78B5"`
+	OutputSamplingFrequency float64 `ebml:"78B5" ebmldeflink:"SamplingFrequency"`
 	Channels                uint    `ebml:"9F" ebmldef:"1"`
 	BitDepth                uint    `ebml:"6264"`
 }
