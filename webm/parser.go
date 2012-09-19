@@ -55,6 +55,10 @@ type TrackEntry struct {
 	Audio           `ebml:"E1"`
 }
 
+func (t *TrackEntry) IsVideo() bool {
+	return t.TrackType == 1
+}
+
 type Video struct {
 	FlagInterlaced  uint `ebml:"9A" ebmldef:"0"`
 	StereoMode      uint `ebml:"53B8" ebmldef:"0"`
@@ -150,3 +154,4 @@ func Parse(r io.Reader, m *WebM) (first *ebml.Element, rest *ebml.Element, err e
 	}
 	return
 }
+

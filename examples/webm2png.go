@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"code.google.com/p/ffvp8-go/ffvp8"
 )
 
 var in = flag.String("i", "", "Input file")
