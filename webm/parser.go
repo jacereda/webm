@@ -154,4 +154,3 @@ func Parse(r io.Reader, m *WebM) (first *ebml.Element, rest *ebml.Element, err e
 	}
 	return
 }
-
