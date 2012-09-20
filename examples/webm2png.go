@@ -27,13 +27,15 @@ func decode(ch chan []byte, wch chan *image.YCbCr) {
 
 func write(ch chan *image.YCbCr, ech chan int) {
 	for i, img := 0, <-ch; img != nil; i, img = i+1, <-ch {
-		path := fmt.Sprint(*out, i, ".png")
-		f, err := os.Create(path)
-		if err != nil {
-			log.Panic("unable to open file " + *in)
+		if *out != "" {
+			path := fmt.Sprint(*out, i, ".png")
+			f, err := os.Create(path)
+			if err != nil {
+				log.Panic("unable to open file " + *in)
+			}
+			png.Encode(f, img)
+			f.Close()
 		}
-		png.Encode(f, img)
-		f.Close()
 	}
 	ech <- 1
 }
