@@ -22,7 +22,6 @@ type Header struct {
 	DocType            string `ebml:"4282"`
 	DocTypeVersion     uint   `ebml:"4287" ebmldef:"1"`
 	DocTypeReadVersion uint   `ebml:"4285" ebmldef:"1"`
-	Clavijo            uint   `ebml:"ABCD" ebmldef:"123"`
 }
 
 type Segment struct {
