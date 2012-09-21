@@ -52,18 +52,8 @@ func decode(ch chan []byte, wch chan *image.YCbCr) {
 	wch <- nil
 }
 
-func setupvp(w, h int) {
-	gl.Viewport(0, 0, gl.Sizei(w), gl.Sizei(h))
-	gl.MatrixMode(gl.PROJECTION)
-	gl.LoadIdentity()
-	gl.Ortho(0, 1, 1, 0, -1, 1)
-	gl.MatrixMode(gl.MODELVIEW)
-	gl.LoadIdentity()
-}
-
-func texinit() (yid gl.Uint) {
-	gl.GenTextures(1, &yid)
-	gl.BindTexture(gl.TEXTURE_2D, yid)
+func texinit(id gl.Uint) {
+	gl.BindTexture(gl.TEXTURE_2D, id)
 	gl.TexParameterf(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 	gl.TexParameterf(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
 	gl.TexParameterf(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
@@ -71,7 +61,7 @@ func texinit() (yid gl.Uint) {
 	return
 }
 
-func shinit(yid, cbid, crid gl.Uint) gl.Uint {
+func shinit() gl.Uint {
 	vs := loadShader(gl.VERTEX_SHADER, vss)
 	fs := loadShader(gl.FRAGMENT_SHADER, fss)
 	prg := gl.CreateProgram()
@@ -93,11 +83,15 @@ func upload(id gl.Uint, data []byte, stride int, w int, h int) {
 }
 
 func initquad() {
-	ver := []gl.Float{0, 0, 1, 0, 0, 1, 1, 1}
+	ver := []gl.Float{-1, 1, 1, 1, -1, -1, 1, -1}
 	gl.BindBuffer(gl.ARRAY_BUFFER, 1)
 	gl.BufferData(gl.ARRAY_BUFFER, gl.Sizeiptr(4*len(ver)),
 		gl.Pointer(&ver[0]), gl.STATIC_DRAW)
 	gl.VertexPointer(2, gl.FLOAT, 0, nil)
+	tex := []gl.Float{0, 0, 1, 0, 0, 1, 1, 1}
+	gl.BindBuffer(gl.ARRAY_BUFFER, 2)
+	gl.BufferData(gl.ARRAY_BUFFER, gl.Sizeiptr(4*len(tex)),
+		gl.Pointer(&tex[0]), gl.STATIC_DRAW)
 	gl.TexCoordPointer(2, gl.FLOAT, 0, nil)
 	gl.EnableClientState(gl.VERTEX_ARRAY)
 	gl.EnableClientState(gl.TEXTURE_COORD_ARRAY)
@@ -111,31 +105,36 @@ func loadShader(shtype gl.Enum, src string) gl.Uint {
 	return sh
 }
 
+func setupvp(w, h int) {
+	gl.Viewport(0, 0, gl.Sizei(w), gl.Sizei(h))
+}
+
 func write(ch chan *image.YCbCr) {
 	img := <-ch
 	w := img.Rect.Dx()
 	h := img.Rect.Dy()
+	gl.Init()
 	glfw.Init()
 	defer glfw.Terminate()
 	glfw.OpenWindow(w, h, 0, 0, 0, 0, 0, 0, glfw.Windowed)
 	defer glfw.CloseWindow()
+	glfw.SetWindowSizeCallback(setupvp)
 	glfw.SetSwapInterval(1)
 	glfw.SetWindowTitle("webmplay")
-	gl.Init()
-	setupvp(w, h)
-	yid := texinit()
-	cbid := texinit()
-	crid := texinit()
-	shinit(yid, cbid, crid)
+	texinit(1)
+	texinit(2)
+	texinit(3)
+	shinit()
 	initquad()
 	gl.Enable(gl.TEXTURE_2D)
 	for ; img != nil; img = <-ch {
+		
 		gl.ActiveTexture(gl.TEXTURE0)
-		upload(yid, img.Y, img.YStride, w, h)
+		upload(1, img.Y, img.YStride, w, h)
 		gl.ActiveTexture(gl.TEXTURE1)
-		upload(cbid, img.Cb, img.CStride, w/2, h/2)
+		upload(2, img.Cb, img.CStride, w/2, h/2)
 		gl.ActiveTexture(gl.TEXTURE2)
-		upload(crid, img.Cr, img.CStride, w/2, h/2)
+		upload(3, img.Cr, img.CStride, w/2, h/2)
 		gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
 		gl.Flush()
 		glfw.SwapBuffers()
