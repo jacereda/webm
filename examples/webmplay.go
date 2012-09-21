@@ -132,7 +132,7 @@ func write(ch chan *image.YCbCr) {
 	shinit(yid, cbid, crid)
 	initquad()
 	gl.Enable(gl.TEXTURE_2D)
-	for i := 0; img != nil; i, img = i+1, <-ch {
+	for ; img != nil; img = <-ch {
 		gl.ActiveTexture(gl.TEXTURE0)
 		upload(yid, img.Y, img.YStride, w, h)
 		gl.ActiveTexture(gl.TEXTURE1)
@@ -142,7 +142,6 @@ func write(ch chan *image.YCbCr) {
 		gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
 		gl.Flush()
 		glfw.SwapBuffers()
-		glfw.Sleep(0.001)
 	}
 }
 
