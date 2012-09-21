@@ -98,9 +98,6 @@ func initquad() {
 	gl.BufferData(gl.ARRAY_BUFFER, gl.Sizeiptr(4*len(ver)),
 		gl.Pointer(&ver[0]), gl.STATIC_DRAW)
 	gl.VertexPointer(2, gl.FLOAT, 0, nil)
-	gl.BindBuffer(gl.ARRAY_BUFFER, 2)
-	gl.BufferData(gl.ARRAY_BUFFER, gl.Sizeiptr(4*len(ver)),
-		gl.Pointer(&ver[0]), gl.STATIC_DRAW)
 	gl.TexCoordPointer(2, gl.FLOAT, 0, nil)
 	gl.EnableClientState(gl.VERTEX_ARRAY)
 	gl.EnableClientState(gl.TEXTURE_COORD_ARRAY)
@@ -173,8 +170,8 @@ func read(dchan chan []byte) {
 
 func main() {
 	flag.Parse()
-	dchan := make(chan []byte, 4)
-	wchan := make(chan *image.YCbCr, 4)
+	dchan := make(chan []byte, 1)
+	wchan := make(chan *image.YCbCr, 1)
 	go read(dchan)
 	go decode(dchan, wchan)
 	write(wchan)
