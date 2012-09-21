@@ -114,7 +114,7 @@ func loadShader(shtype gl.Enum, src string) gl.Uint {
 	return sh
 }
 
-func write(ch chan *image.YCbCr, ech chan int) {
+func write(ch chan *image.YCbCr) {
 	img := <-ch
 	w := img.Rect.Dx()
 	h := img.Rect.Dy()
@@ -144,7 +144,6 @@ func write(ch chan *image.YCbCr, ech chan int) {
 		glfw.SwapBuffers()
 		glfw.Sleep(0.001)
 	}
-	ech <- 1
 }
 
 func read(dchan chan []byte) {
@@ -177,9 +176,7 @@ func main() {
 	flag.Parse()
 	dchan := make(chan []byte, 4)
 	wchan := make(chan *image.YCbCr, 4)
-	echan := make(chan int, 1)
 	go read(dchan)
 	go decode(dchan, wchan)
-	go write(wchan, echan)
-	<-echan
+	write(wchan)
 }
