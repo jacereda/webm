@@ -5,7 +5,6 @@ import (
 	"code.google.com/p/ebml-go/webm"
 	"code.google.com/p/ffvp8-go/ffvp8"
 	"flag"
-	"fmt"
 	gl "github.com/chsc/gogl/gl21"
 	"github.com/jteeuwen/glfw"
 	"image"
@@ -79,9 +78,10 @@ func shinit(yid, cbid, crid gl.Uint) gl.Uint {
 	gl.AttachShader(prg, vs)
 	gl.AttachShader(prg, fs)
 	gl.LinkProgram(prg)
-	fmt.Println(gl.GetError(), prg)
 	gl.UseProgram(prg)
-	fmt.Println(gl.GetError())
+	gl.Uniform1i(0, 0)
+	gl.Uniform1i(1, 1)
+	gl.Uniform1i(2, 2)
 	return prg
 }
 
@@ -131,21 +131,14 @@ func write(ch chan *image.YCbCr, ech chan int) {
 	crid := texinit()
 	shinit(yid, cbid, crid)
 	initquad()
+	gl.Enable(gl.TEXTURE_2D)
 	for i := 0; img != nil; i, img = i+1, <-ch {
 		gl.ActiveTexture(gl.TEXTURE0)
-		gl.Enable(gl.TEXTURE_2D)
 		upload(yid, img.Y, img.YStride, w, h)
-		gl.Uniform1i(0, 0)
-
 		gl.ActiveTexture(gl.TEXTURE1)
-		gl.Enable(gl.TEXTURE_2D)
 		upload(cbid, img.Cb, img.CStride, w/2, h/2)
-		gl.Uniform1i(1, 1)
-
 		gl.ActiveTexture(gl.TEXTURE2)
-		gl.Enable(gl.TEXTURE_2D)
 		upload(crid, img.Cr, img.CStride, w/2, h/2)
-		gl.Uniform1i(2, 2)
 		gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
 		gl.Flush()
 		glfw.SwapBuffers()
@@ -154,21 +147,17 @@ func write(ch chan *image.YCbCr, ech chan int) {
 	ech <- 1
 }
 
-func main() {
-	flag.Parse()
+func read(dchan chan []byte) {
+	var err error
+	var wm webm.WebM
 	r, err := os.Open(*in)
+	defer r.Close()
 	if err != nil {
 		log.Panic("unable to open file " + *in)
 	}
 	br := bufio.NewReader(r)
-	var wm webm.WebM
 	e, rest, err := webm.Parse(br, &wm)
 	track := wm.FindFirstVideoTrack()
-	dchan := make(chan []byte, 16)
-	wchan := make(chan *image.YCbCr, 16)
-	echan := make(chan int, 1)
-	go decode(dchan, wchan)
-	go write(wchan, echan)
 	for i := 0; err == nil && i < *nf; {
 		t := make([]byte, 4)
 		io.ReadFull(e.R, t)
@@ -182,5 +171,15 @@ func main() {
 		e, err = rest.Next()
 	}
 	dchan <- nil
+}
+
+func main() {
+	flag.Parse()
+	dchan := make(chan []byte, 4)
+	wchan := make(chan *image.YCbCr, 4)
+	echan := make(chan int, 1)
+	go read(dchan)
+	go decode(dchan, wchan)
+	go write(wchan, echan)
 	<-echan
 }
