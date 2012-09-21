@@ -163,12 +163,7 @@ func main() {
 	br := bufio.NewReader(r)
 	var wm webm.WebM
 	e, rest, err := webm.Parse(br, &wm)
-	var track webm.TrackEntry
-	for _, track = range wm.Segment.Tracks.TrackEntry {
-		if track.IsVideo() {
-			break
-		}
-	}
+	track := wm.FindFirstVideoTrack()
 	dchan := make(chan []byte, 16)
 	wchan := make(chan *image.YCbCr, 16)
 	echan := make(chan int, 1)

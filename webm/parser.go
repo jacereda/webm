@@ -14,6 +14,16 @@ type WebM struct {
 	Segment `ebml:"18538067"`
 }
 
+func (w *WebM) FindFirstVideoTrack() (*TrackEntry) {
+	t := w.Segment.Tracks.TrackEntry
+	for i,l := 0,len(t); i < l; i++ {
+		if t[i].IsVideo() {
+			return &t[i]
+		}
+	}
+	return nil
+}
+
 type Header struct {
 	EBMLVersion        uint   `ebml:"4286" ebmldef:"1"`
 	EBMLReadVersion    uint   `ebml:"42f7" ebmldef:"1"`
