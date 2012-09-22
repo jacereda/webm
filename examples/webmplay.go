@@ -112,7 +112,7 @@ func write(wchan <-chan *ffvp8.Frame) {
 	initquad()
 	gl.Enable(gl.TEXTURE_2D)
 	tbase := time.Now()
-	for ; glfw.WindowParam(glfw.Opened) == 1 && img != nil;  {
+	for ; glfw.WindowParam(glfw.Opened) == 1;  {
 		gl.ActiveTexture(gl.TEXTURE0)
 		upload(1, img.Y, img.YStride, w, h)
 		gl.ActiveTexture(gl.TEXTURE1)
@@ -123,7 +123,11 @@ func write(wchan <-chan *ffvp8.Frame) {
 		runtime.GC()
 		glfw.SwapBuffers()
 		if time.Now().After(tbase.Add(img.Timecode)) {
-			img = <-wchan
+			var ok bool
+			img,ok = <-wchan
+			if !ok {
+				break
+			}
 		}
 	}
 }

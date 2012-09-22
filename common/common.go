@@ -18,13 +18,13 @@ const chancap = 0
 
 func decode(dchan <-chan webm.Packet, wchan chan<- *ffvp8.Frame) {
 	dec := ffvp8.NewDecoder()
-	for pkt := <-dchan; !pkt.IsLast(); pkt = <-dchan {
+	for pkt := range dchan {
 		img := dec.Decode(pkt.Data, pkt.Timecode)
 		if !pkt.Invisible {
 			wchan <- img
 		}
 	}
-	wchan <- nil
+	close(wchan)
 }
 
 func read(dchan chan<- webm.Packet) {
@@ -38,9 +38,12 @@ func read(dchan chan<- webm.Packet) {
 	br := bufio.NewReader(r)
 	pchan := webm.Parse(br, &wm)
 	track := wm.FindFirstVideoTrack()
-	for i := 0; err == nil && i < *nf; {
-		pkt := <-pchan
-		if pkt.IsLast() {
+	if track == nil {
+		log.Panic("No video track")
+	}
+	i := 0
+	for pkt := range(pchan) {
+		if i >= *nf {
 			break
 		}
 		if pkt.TrackNumber == track.TrackNumber {
@@ -48,7 +51,7 @@ func read(dchan chan<- webm.Packet) {
 			i++
 		}
 	}
-	dchan <- webm.Last()
+	close(dchan)
 }
 
 func Main(write func(ch <-chan *ffvp8.Frame)) {

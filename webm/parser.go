@@ -181,7 +181,7 @@ func parseClusters(e *ebml.Element, rest *ebml.Element, ch chan<- Packet) {
 		}
 		e, err = rest.Next()
 	}
-	ch <- Last()
+	close(ch)
 }
 
 func Parse(r io.Reader, m *WebM) (<-chan Packet) {
@@ -203,12 +203,4 @@ type Packet struct {
 	Timecode    time.Duration
 	TrackNumber uint
 	Invisible   bool
-}
-
-func (p Packet) IsLast() bool {
-	return p.Data == nil
-}
-
-func Last() Packet {
-	return Packet{nil, 0, 0, false}
 }
