@@ -136,7 +136,6 @@ func write(ch chan *image.YCbCr) {
 		gl.ActiveTexture(gl.TEXTURE2)
 		upload(3, img.Cr, img.CStride, w/2, h/2)
 		gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
-		gl.Flush()
 		runtime.GC()
 		glfw.SwapBuffers()
 	}
