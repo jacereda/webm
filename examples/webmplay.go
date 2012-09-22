@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 	"os"
+	"runtime"
 )
 
 var in = flag.String("i", "", "Input file")
@@ -128,7 +129,6 @@ func write(ch chan *image.YCbCr) {
 	initquad()
 	gl.Enable(gl.TEXTURE_2D)
 	for ; img != nil; img = <-ch {
-		
 		gl.ActiveTexture(gl.TEXTURE0)
 		upload(1, img.Y, img.YStride, w, h)
 		gl.ActiveTexture(gl.TEXTURE1)
@@ -137,6 +137,7 @@ func write(ch chan *image.YCbCr) {
 		upload(3, img.Cr, img.CStride, w/2, h/2)
 		gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
 		gl.Flush()
+		runtime.GC()
 		glfw.SwapBuffers()
 	}
 }
