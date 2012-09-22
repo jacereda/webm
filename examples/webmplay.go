@@ -45,12 +45,12 @@ void main() {
 }
 `
 
-func decode(ch chan []byte, wch chan *image.YCbCr) {
+func decode(dchan chan []byte, wchan chan *image.YCbCr) {
 	dec := ffvp8.NewDecoder()
-	for data := <-ch; data != nil; data = <-ch {
-		wch <- dec.Decode(data)
+	for data := <-dchan; data != nil; data = <- dchan {
+		wchan <- dec.Decode(data)
 	}
-	wch <- nil
+	wchan <- nil
 }
 
 func texinit(id gl.Uint) {
@@ -62,7 +62,7 @@ func texinit(id gl.Uint) {
 	return
 }
 
-func shinit() gl.Uint {
+func shinit() {
 	vs := loadShader(gl.VERTEX_SHADER, vss)
 	fs := loadShader(gl.FRAGMENT_SHADER, fss)
 	prg := gl.CreateProgram()
@@ -73,7 +73,6 @@ func shinit() gl.Uint {
 	gl.Uniform1i(0, 0)
 	gl.Uniform1i(1, 1)
 	gl.Uniform1i(2, 2)
-	return prg
 }
 
 func upload(id gl.Uint, data []byte, stride int, w int, h int) {
@@ -110,8 +109,8 @@ func setupvp(w, h int) {
 	gl.Viewport(0, 0, gl.Sizei(w), gl.Sizei(h))
 }
 
-func write(ch chan *image.YCbCr) {
-	img := <-ch
+func write(wchan chan *image.YCbCr) {
+	img := <- wchan
 	w := img.Rect.Dx()
 	h := img.Rect.Dy()
 	gl.Init()
@@ -128,7 +127,7 @@ func write(ch chan *image.YCbCr) {
 	shinit()
 	initquad()
 	gl.Enable(gl.TEXTURE_2D)
-	for ; img != nil; img = <-ch {
+	for ; img != nil; img = <- wchan {
 		gl.ActiveTexture(gl.TEXTURE0)
 		upload(1, img.Y, img.YStride, w, h)
 		gl.ActiveTexture(gl.TEXTURE1)
