@@ -8,14 +8,17 @@ import (
 	gl "github.com/chsc/gogl/gl21"
 	"github.com/jteeuwen/glfw"
 	"image"
-	"io"
 	"log"
 	"os"
 	"runtime"
 )
 
-var in = flag.String("i", "", "Input file")
-var nf = flag.Int("n", 0x7fffffff, "Number of frames")
+var (
+	in = flag.String("i", "", "Input file")
+	nf = flag.Int("n", 0x7fffffff, "Number of frames")
+)
+
+const chancap = 0
 
 const vss = `
 void main() {
@@ -45,10 +48,13 @@ void main() {
 }
 `
 
-func decode(dchan chan []byte, wchan chan *image.YCbCr) {
+func decode(dchan chan webm.Packet, wchan chan *image.YCbCr) {
 	dec := ffvp8.NewDecoder()
-	for data := <-dchan; data != nil; data = <- dchan {
-		wchan <- dec.Decode(data)
+	for pkt := <- dchan; !pkt.IsLast(); pkt = <- dchan {
+		img := dec.Decode(pkt.Data)
+		if !pkt.Invisible {
+			wchan <- img
+		}
 	}
 	wchan <- nil
 }
@@ -140,7 +146,7 @@ func write(wchan chan *image.YCbCr) {
 	}
 }
 
-func read(dchan chan []byte) {
+func read(dchan chan webm.Packet) {
 	var err error
 	var wm webm.WebM
 	r, err := os.Open(*in)
@@ -149,27 +155,25 @@ func read(dchan chan []byte) {
 		log.Panic("unable to open file " + *in)
 	}
 	br := bufio.NewReader(r)
-	e, rest, err := webm.Parse(br, &wm)
+	pchan := webm.Parse(br, &wm)
 	track := wm.FindFirstVideoTrack()
 	for i := 0; err == nil && i < *nf; {
-		t := make([]byte, 4)
-		io.ReadFull(e.R, t)
-		if uint(t[0])&0x7f == track.TrackNumber {
-			data := make([]byte, e.Size())
-			io.ReadFull(e.R, data)
-			dchan <- data
+		pkt := <- pchan
+		if pkt.IsLast() {
+			break
+		}
+		if pkt.TrackNumber == track.TrackNumber {
+			dchan <- pkt
 			i++
 		}
-		_, err = e.ReadData()
-		e, err = rest.Next()
 	}
-	dchan <- nil
+	dchan <- webm.Last()
 }
 
 func main() {
 	flag.Parse()
-	dchan := make(chan []byte, 1)
-	wchan := make(chan *image.YCbCr, 1)
+	dchan := make(chan webm.Packet, chancap)
+	wchan := make(chan *image.YCbCr, chancap)
 	go read(dchan)
 	go decode(dchan, wchan)
 	write(wchan)

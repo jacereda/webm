@@ -35,10 +35,10 @@ type Header struct {
 }
 
 type Segment struct {
+	cluster Cluster    `ebml:"1F43B675" ebmlstop:"1"`
 	SeekHead           `ebml:"114D9B74"`
 	SegmentInformation `ebml:"1549A966"`
 	Tracks             `ebml:"1654AE6B"`
-	Cluster            `ebml:"1F43B675"`
 	Cues               `ebml:"1C53BB6B"`
 }
 
@@ -120,7 +120,7 @@ type Cluster struct {
 }
 
 type BlockGroup struct {
-	block          []byte   `ebml:"A1" ebmlstop:"1"`
+	block          []byte   `ebml:"A1"`
 	BlockDuration  uint     `ebml:"9B"`
 	ReferenceBlock int      `ebml:"FB"`
 	CodecState     []byte   `ebml:"A4"`
@@ -150,16 +150,64 @@ type CueTrackPositions struct {
 	CueBlockNumber     uint `ebml:"5378" ebmldef:"1"`
 }
 
-func Parse(r io.Reader, m *WebM) (first *ebml.Element, rest *ebml.Element, err error) {
-	var e *ebml.Element
-	e, err = ebml.RootElement(r)
+func sendPackets(e *ebml.Element, rest *ebml.Element, tbase uint, ch chan Packet) {
+	var err error
+	var p Packet
+	for err == nil {
+		var hdr []byte
+		hdr, err = e.ReadData()
+		if len(hdr) > 4 {
+			p.Data = hdr[4:]
+			p.TrackNumber = uint(hdr[0]) & 0x7f
+			p.Timecode = tbase + uint(hdr[1]) << 8 + uint(hdr[2])
+			p.Invisible = 1 == (hdr[3] & 0x80)
+			ch <- p
+		}
+		e, err = rest.Next()
+	}
+}
+
+func parseClusters(e *ebml.Element, rest *ebml.Element, ch chan Packet) {
+	var err error
+	for err == nil && e != nil {
+		var c Cluster
+		err = e.Unmarshal(&c)
+		if err != nil && err.Error() == "Reached payload" {
+			sendPackets(err.(ebml.ReachedPayloadError).First,
+				err.(ebml.ReachedPayloadError).Rest, 
+				c.Timecode, ch)
+		}
+		e, err = rest.Next()
+	}
+	ch <- Last()
+}
+
+func Parse(r io.Reader, m *WebM) (ch chan Packet) {
+	ch = make(chan Packet, 1)
+	e, err := ebml.RootElement(r)
 	if err == nil {
 		err = e.Unmarshal(m)
-	}
-	if err.Error() == "Reached payload" {
-		first = err.(ebml.ReachedPayloadError).First
-		rest = err.(ebml.ReachedPayloadError).Rest
-		err = nil
+		if err != nil && err.Error() == "Reached payload" {
+			go parseClusters(err.(ebml.ReachedPayloadError).First,
+				err.(ebml.ReachedPayloadError).Rest, 
+				ch)
+		}
 	}
 	return
 }
+
+type Packet struct {
+	Timecode uint
+	TrackNumber uint
+	Invisible bool
+	Data []byte
+}
+
+func (p Packet) IsLast() bool {
+	return p.Data == nil
+}
+
+func Last() Packet {
+	return Packet{0, 0, false, nil}
+}
+		

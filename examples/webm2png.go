@@ -8,24 +8,30 @@ import (
 	"fmt"
 	"image"
 	"image/png"
-	"io"
 	"log"
 	"os"
 )
 
-var in = flag.String("i", "", "Input file")
-var out = flag.String("o", "", "Output prefix")
-var nf = flag.Int("n", 0x7fffffff, "Number of frames")
+var (
+	in = flag.String("i", "", "Input file")
+	out = flag.String("o", "", "Output prefix")
+	nf = flag.Int("n", 0x7fffffff, "Number of frames")
+)
 
-func decode(ch chan []byte, wch chan *image.YCbCr) {
+const chancap = 0
+
+func decode(dchan chan webm.Packet, wchan chan *image.YCbCr) {
 	dec := ffvp8.NewDecoder()
-	for data := <-ch; data != nil; data = <-ch {
-		wch <- dec.Decode(data)
+	for pkt := <- dchan; !pkt.IsLast(); pkt = <- dchan {
+		img := dec.Decode(pkt.Data)
+		if !pkt.Invisible {
+			wchan <- img
+		}
 	}
-	wch <- nil
+	wchan <- nil
 }
 
-func write(ch chan *image.YCbCr, ech chan int) {
+func write(ch chan *image.YCbCr) {
 	for i, img := 0, <-ch; img != nil; i, img = i+1, <-ch {
 		if *out != "" {
 			path := fmt.Sprint(*out, i, ".png")
@@ -37,42 +43,37 @@ func write(ch chan *image.YCbCr, ech chan int) {
 			f.Close()
 		}
 	}
-	ech <- 1
 }
 
-func main() {
-	flag.Parse()
+func read(dchan chan webm.Packet) {
+	var err error
+	var wm webm.WebM
 	r, err := os.Open(*in)
+	defer r.Close()
 	if err != nil {
 		log.Panic("unable to open file " + *in)
 	}
 	br := bufio.NewReader(r)
-	var wm webm.WebM
-	e, rest, err := webm.Parse(br, &wm)
-	var track webm.TrackEntry
-	for _, track = range wm.Segment.Tracks.TrackEntry {
-		if track.IsVideo() {
+	pchan := webm.Parse(br, &wm)
+	track := wm.FindFirstVideoTrack()
+	for i := 0; err == nil && i < *nf; {
+		pkt := <- pchan
+		if pkt.IsLast() {
 			break
 		}
-	}
-	dchan := make(chan []byte, 16)
-	wchan := make(chan *image.YCbCr, 16)
-	echan := make(chan int, 1)
-	go decode(dchan, wchan)
-	go write(wchan, echan)
-	fmt.Println("NF", *nf)
-	for i := 0; err == nil && i < *nf; {
-		t := make([]byte, 4)
-		io.ReadFull(e.R, t)
-		if uint(t[0])&0x7f == track.TrackNumber {
-			data := make([]byte, e.Size())
-			io.ReadFull(e.R, data)
-			dchan <- data
+		if pkt.TrackNumber == track.TrackNumber {
+			dchan <- pkt
 			i++
 		}
-		_, err = e.ReadData()
-		e, err = rest.Next()
 	}
-	dchan <- nil
-	<-echan
+	dchan <- webm.Last()
+}
+
+func main() {
+	flag.Parse()
+	dchan := make(chan webm.Packet, chancap)
+	wchan := make(chan *image.YCbCr, chancap)
+	go read(dchan)
+	go decode(dchan, wchan)
+	write(wchan)
 }
