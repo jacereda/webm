@@ -185,7 +185,7 @@ func parseClusters(e *ebml.Element, rest *ebml.Element, ch chan<- Packet) {
 }
 
 func Parse(r io.Reader, m *WebM) (<-chan Packet) {
-	ch := make(chan Packet, 1)
+	ch := make(chan Packet, 2)
 	e, err := ebml.RootElement(r)
 	if err == nil {
 		err = e.Unmarshal(m)
