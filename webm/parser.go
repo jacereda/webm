@@ -7,6 +7,7 @@ package webm
 import (
 	"code.google.com/p/ebml-go/ebml"
 	"io"
+	"time"
 )
 
 type WebM struct {
@@ -159,7 +160,8 @@ func sendPackets(e *ebml.Element, rest *ebml.Element, tbase uint, ch chan<- Pack
 		if len(hdr) > 4 {
 			p.Data = hdr[4:]
 			p.TrackNumber = uint(hdr[0]) & 0x7f
-			p.Timecode = tbase + uint(hdr[1])<<8 + uint(hdr[2])
+			p.Timecode = time.Millisecond * time.Duration(
+				tbase + uint(hdr[1])<<8 + uint(hdr[2]))
 			p.Invisible = 1 == (hdr[3] & 0x80)
 			ch <- p
 		}
@@ -197,10 +199,10 @@ func Parse(r io.Reader, m *WebM) (<-chan Packet) {
 }
 
 type Packet struct {
-	Timecode    uint
+	Data        []byte
+	Timecode    time.Duration
 	TrackNumber uint
 	Invisible   bool
-	Data        []byte
 }
 
 func (p Packet) IsLast() bool {
@@ -208,5 +210,5 @@ func (p Packet) IsLast() bool {
 }
 
 func Last() Packet {
-	return Packet{0, 0, false, nil}
+	return Packet{nil, 0, 0, false}
 }

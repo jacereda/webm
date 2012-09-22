@@ -6,6 +6,7 @@ import (
 	gl "github.com/chsc/gogl/gl21"
 	"github.com/jteeuwen/glfw"
 	"runtime"
+	"time"
 )
 
 const vss = `
@@ -110,7 +111,8 @@ func write(wchan <-chan *ffvp8.Frame) {
 	shinit()
 	initquad()
 	gl.Enable(gl.TEXTURE_2D)
-	for ; glfw.WindowParam(glfw.Opened) == 1 && img != nil; img = <-wchan {
+	tbase := time.Now()
+	for ; glfw.WindowParam(glfw.Opened) == 1 && img != nil;  {
 		gl.ActiveTexture(gl.TEXTURE0)
 		upload(1, img.Y, img.YStride, w, h)
 		gl.ActiveTexture(gl.TEXTURE1)
@@ -120,6 +122,9 @@ func write(wchan <-chan *ffvp8.Frame) {
 		gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
 		runtime.GC()
 		glfw.SwapBuffers()
+		if time.Now().After(tbase.Add(img.Timecode)) {
+			img = <-wchan
+		}
 	}
 }
 

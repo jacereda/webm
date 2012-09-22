@@ -19,7 +19,7 @@ const chancap = 0
 func decode(dchan <-chan webm.Packet, wchan chan<- *ffvp8.Frame) {
 	dec := ffvp8.NewDecoder()
 	for pkt := <-dchan; !pkt.IsLast(); pkt = <-dchan {
-		img := dec.Decode(pkt.Data)
+		img := dec.Decode(pkt.Data, pkt.Timecode)
 		if !pkt.Invisible {
 			wchan <- img
 		}
