@@ -2,9 +2,9 @@ package main
 
 import (
 	"code.google.com/p/ebml-go/common"
+	"code.google.com/p/ffvp8-go/ffvp8"
 	"flag"
 	"fmt"
-	"image"
 	"image/png"
 	"log"
 	"os"
@@ -13,9 +13,10 @@ import (
 
 var out = flag.String("o", "", "Output prefix")
 
-func write(ch <-chan *image.YCbCr) {
-	for i, img := 0, <-ch; img != nil; i, img = i+1, <-ch {
-		if *out != "" {
+func write(ch <-chan *ffvp8.Frame) {
+	i := 0
+	for img := range ch {
+		if (*out != "") {
 			path := fmt.Sprint(*out, i, ".png")
 			f, err := os.Create(path)
 			if err != nil {
@@ -25,6 +26,7 @@ func write(ch <-chan *image.YCbCr) {
 			f.Close()
 			runtime.GC()
 		}
+		i++
 	}
 }
 
