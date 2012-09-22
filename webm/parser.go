@@ -150,7 +150,7 @@ type CueTrackPositions struct {
 	CueBlockNumber     uint `ebml:"5378" ebmldef:"1"`
 }
 
-func sendPackets(e *ebml.Element, rest *ebml.Element, tbase uint, ch chan Packet) {
+func sendPackets(e *ebml.Element, rest *ebml.Element, tbase uint, ch chan<- Packet) {
 	var err error
 	var p Packet
 	for err == nil {
@@ -167,7 +167,7 @@ func sendPackets(e *ebml.Element, rest *ebml.Element, tbase uint, ch chan Packet
 	}
 }
 
-func parseClusters(e *ebml.Element, rest *ebml.Element, ch chan Packet) {
+func parseClusters(e *ebml.Element, rest *ebml.Element, ch chan<- Packet) {
 	var err error
 	for err == nil && e != nil {
 		var c Cluster
@@ -182,8 +182,8 @@ func parseClusters(e *ebml.Element, rest *ebml.Element, ch chan Packet) {
 	ch <- Last()
 }
 
-func Parse(r io.Reader, m *WebM) (ch chan Packet) {
-	ch = make(chan Packet, 1)
+func Parse(r io.Reader, m *WebM) (<-chan Packet) {
+	ch := make(chan Packet, 1)
 	e, err := ebml.RootElement(r)
 	if err == nil {
 		err = e.Unmarshal(m)
@@ -193,7 +193,7 @@ func Parse(r io.Reader, m *WebM) (ch chan Packet) {
 				ch)
 		}
 	}
-	return
+	return ch
 }
 
 type Packet struct {

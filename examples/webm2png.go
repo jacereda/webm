@@ -13,7 +13,7 @@ import (
 
 var out = flag.String("o", "", "Output prefix")
 
-func write(ch chan *image.YCbCr) {
+func write(ch <-chan *image.YCbCr) {
 	for i, img := 0, <-ch; img != nil; i, img = i+1, <-ch {
 		if *out != "" {
 			path := fmt.Sprint(*out, i, ".png")

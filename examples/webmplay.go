@@ -92,7 +92,7 @@ func setupvp(w, h int) {
 	gl.Viewport(0, 0, gl.Sizei(w), gl.Sizei(h))
 }
 
-func write(wchan chan *image.YCbCr) {
+func write(wchan <-chan *image.YCbCr) {
 	img := <-wchan
 	w := img.Rect.Dx()
 	h := img.Rect.Dy()

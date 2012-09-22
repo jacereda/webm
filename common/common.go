@@ -17,7 +17,7 @@ var (
 
 const chancap = 0
 
-func decode(dchan chan webm.Packet, wchan chan *image.YCbCr) {
+func decode(dchan <-chan webm.Packet, wchan chan<- *image.YCbCr) {
 	dec := ffvp8.NewDecoder()
 	for pkt := <-dchan; !pkt.IsLast(); pkt = <-dchan {
 		img := dec.Decode(pkt.Data)
@@ -28,7 +28,7 @@ func decode(dchan chan webm.Packet, wchan chan *image.YCbCr) {
 	wchan <- nil
 }
 
-func read(dchan chan webm.Packet) {
+func read(dchan chan<- webm.Packet) {
 	var err error
 	var wm webm.WebM
 	r, err := os.Open(*in)
@@ -52,7 +52,7 @@ func read(dchan chan webm.Packet) {
 	dchan <- webm.Last()
 }
 
-func Main(write func(ch chan *image.YCbCr)) {
+func Main(write func(ch <-chan *image.YCbCr)) {
 	flag.Parse()
 	dchan := make(chan webm.Packet, chancap)
 	wchan := make(chan *image.YCbCr, chancap)
