@@ -1,13 +1,14 @@
 package main
 
 import (
+	"code.google.com/p/ebml-go/common"
 	"flag"
 	"fmt"
 	"image"
 	"image/png"
 	"log"
 	"os"
-	"code.google.com/p/ebml-go/common"
+	"runtime"
 )
 
 var out = flag.String("o", "", "Output prefix")
@@ -22,6 +23,7 @@ func write(ch chan *image.YCbCr) {
 			}
 			png.Encode(f, img)
 			f.Close()
+			runtime.GC()
 		}
 	}
 }

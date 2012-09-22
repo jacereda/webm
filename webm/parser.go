@@ -14,9 +14,9 @@ type WebM struct {
 	Segment `ebml:"18538067"`
 }
 
-func (w *WebM) FindFirstVideoTrack() (*TrackEntry) {
+func (w *WebM) FindFirstVideoTrack() *TrackEntry {
 	t := w.Segment.Tracks.TrackEntry
-	for i,l := 0,len(t); i < l; i++ {
+	for i, l := 0, len(t); i < l; i++ {
 		if t[i].IsVideo() {
 			return &t[i]
 		}
@@ -35,7 +35,7 @@ type Header struct {
 }
 
 type Segment struct {
-	cluster Cluster    `ebml:"1F43B675" ebmlstop:"1"`
+	cluster            Cluster `ebml:"1F43B675" ebmlstop:"1"`
 	SeekHead           `ebml:"114D9B74"`
 	SegmentInformation `ebml:"1549A966"`
 	Tracks             `ebml:"1654AE6B"`
@@ -159,7 +159,7 @@ func sendPackets(e *ebml.Element, rest *ebml.Element, tbase uint, ch chan Packet
 		if len(hdr) > 4 {
 			p.Data = hdr[4:]
 			p.TrackNumber = uint(hdr[0]) & 0x7f
-			p.Timecode = tbase + uint(hdr[1]) << 8 + uint(hdr[2])
+			p.Timecode = tbase + uint(hdr[1])<<8 + uint(hdr[2])
 			p.Invisible = 1 == (hdr[3] & 0x80)
 			ch <- p
 		}
@@ -174,7 +174,7 @@ func parseClusters(e *ebml.Element, rest *ebml.Element, ch chan Packet) {
 		err = e.Unmarshal(&c)
 		if err != nil && err.Error() == "Reached payload" {
 			sendPackets(err.(ebml.ReachedPayloadError).First,
-				err.(ebml.ReachedPayloadError).Rest, 
+				err.(ebml.ReachedPayloadError).Rest,
 				c.Timecode, ch)
 		}
 		e, err = rest.Next()
@@ -189,7 +189,7 @@ func Parse(r io.Reader, m *WebM) (ch chan Packet) {
 		err = e.Unmarshal(m)
 		if err != nil && err.Error() == "Reached payload" {
 			go parseClusters(err.(ebml.ReachedPayloadError).First,
-				err.(ebml.ReachedPayloadError).Rest, 
+				err.(ebml.ReachedPayloadError).Rest,
 				ch)
 		}
 	}
@@ -197,10 +197,10 @@ func Parse(r io.Reader, m *WebM) (ch chan Packet) {
 }
 
 type Packet struct {
-	Timecode uint
+	Timecode    uint
 	TrackNumber uint
-	Invisible bool
-	Data []byte
+	Invisible   bool
+	Data        []byte
 }
 
 func (p Packet) IsLast() bool {
@@ -210,4 +210,3 @@ func (p Packet) IsLast() bool {
 func Last() Packet {
 	return Packet{0, 0, false, nil}
 }
-		

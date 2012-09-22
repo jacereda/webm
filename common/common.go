@@ -19,7 +19,7 @@ const chancap = 0
 
 func decode(dchan chan webm.Packet, wchan chan *image.YCbCr) {
 	dec := ffvp8.NewDecoder()
-	for pkt := <- dchan; !pkt.IsLast(); pkt = <- dchan {
+	for pkt := <-dchan; !pkt.IsLast(); pkt = <-dchan {
 		img := dec.Decode(pkt.Data)
 		if !pkt.Invisible {
 			wchan <- img
@@ -40,7 +40,7 @@ func read(dchan chan webm.Packet) {
 	pchan := webm.Parse(br, &wm)
 	track := wm.FindFirstVideoTrack()
 	for i := 0; err == nil && i < *nf; {
-		pkt := <- pchan
+		pkt := <-pchan
 		if pkt.IsLast() {
 			break
 		}

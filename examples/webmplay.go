@@ -1,11 +1,11 @@
 package main
 
 import (
+	"code.google.com/p/ebml-go/common"
 	gl "github.com/chsc/gogl/gl21"
 	"github.com/jteeuwen/glfw"
 	"image"
 	"runtime"
-	"code.google.com/p/ebml-go/common"
 )
 
 const vss = `
@@ -93,7 +93,7 @@ func setupvp(w, h int) {
 }
 
 func write(wchan chan *image.YCbCr) {
-	img := <- wchan
+	img := <-wchan
 	w := img.Rect.Dx()
 	h := img.Rect.Dy()
 	gl.Init()
@@ -110,7 +110,7 @@ func write(wchan chan *image.YCbCr) {
 	shinit()
 	initquad()
 	gl.Enable(gl.TEXTURE_2D)
-	for ; img != nil; img = <- wchan {
+	for ; img != nil; img = <-wchan {
 		gl.ActiveTexture(gl.TEXTURE0)
 		upload(1, img.Y, img.YStride, w, h)
 		gl.ActiveTexture(gl.TEXTURE1)
