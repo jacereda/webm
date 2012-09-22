@@ -110,7 +110,7 @@ func write(wchan <-chan *image.YCbCr) {
 	shinit()
 	initquad()
 	gl.Enable(gl.TEXTURE_2D)
-	for ; img != nil; img = <-wchan {
+	for ; glfw.WindowParam(glfw.Opened) == 1 && img != nil; img = <-wchan {
 		gl.ActiveTexture(gl.TEXTURE0)
 		upload(1, img.Y, img.YStride, w, h)
 		gl.ActiveTexture(gl.TEXTURE1)
