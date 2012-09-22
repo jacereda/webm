@@ -42,7 +42,7 @@ func read(dchan chan<- webm.Packet) {
 		log.Panic("No video track")
 	}
 	i := 0
-	for pkt := range(pchan) {
+	for pkt := range pchan {
 		if i >= *nf {
 			break
 		}

@@ -3,11 +3,15 @@ package main
 import (
 	"code.google.com/p/ebml-go/common"
 	"code.google.com/p/ffvp8-go/ffvp8"
+	"flag"
 	gl "github.com/chsc/gogl/gl21"
 	"github.com/jteeuwen/glfw"
 	"runtime"
 	"time"
 )
+
+var unsync = flag.Bool("u", false, "Unsynchronized display")
+var notc = flag.Bool("t", false, "Ignore timecodes")
 
 const vss = `
 void main() {
@@ -103,7 +107,9 @@ func write(wchan <-chan *ffvp8.Frame) {
 	glfw.OpenWindow(w, h, 0, 0, 0, 0, 0, 0, glfw.Windowed)
 	defer glfw.CloseWindow()
 	glfw.SetWindowSizeCallback(setupvp)
-	glfw.SetSwapInterval(1)
+	if !*unsync {
+		glfw.SetSwapInterval(1)
+	}
 	glfw.SetWindowTitle("webmplay")
 	texinit(1)
 	texinit(2)
@@ -112,7 +118,7 @@ func write(wchan <-chan *ffvp8.Frame) {
 	initquad()
 	gl.Enable(gl.TEXTURE_2D)
 	tbase := time.Now()
-	for ; glfw.WindowParam(glfw.Opened) == 1;  {
+	for glfw.WindowParam(glfw.Opened) == 1 {
 		gl.ActiveTexture(gl.TEXTURE0)
 		upload(1, img.Y, img.YStride, w, h)
 		gl.ActiveTexture(gl.TEXTURE1)
@@ -122,9 +128,9 @@ func write(wchan <-chan *ffvp8.Frame) {
 		gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
 		runtime.GC()
 		glfw.SwapBuffers()
-		if time.Now().After(tbase.Add(img.Timecode)) {
+		if *notc || time.Now().After(tbase.Add(img.Timecode)) {
 			var ok bool
-			img,ok = <-wchan
+			img, ok = <-wchan
 			if !ok {
 				break
 			}

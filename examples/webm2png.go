@@ -16,7 +16,7 @@ var out = flag.String("o", "", "Output prefix")
 func write(ch <-chan *ffvp8.Frame) {
 	i := 0
 	for img := range ch {
-		if (*out != "") {
+		if *out != "" {
 			path := fmt.Sprint(*out, i, ".png")
 			f, err := os.Create(path)
 			if err != nil {
