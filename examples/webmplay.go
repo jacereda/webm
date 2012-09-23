@@ -188,7 +188,7 @@ func write(wchan <-chan *ffvp8.Frame) {
 	if !*unsync {
 		glfw.SetSwapInterval(1)
 	}
-	glfw.SetWindowTitle("webmplay")
+	glfw.SetWindowTitle(*common.In)
 	for i := 0; i < ntex; i++ {
 		texinit(i + 1)
 	}
