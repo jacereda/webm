@@ -15,6 +15,7 @@ var (
 	unsync = flag.Bool("u", false, "Unsynchronized display")
 	notc   = flag.Bool("t", false, "Ignore timecodes")
 	blend  = flag.Bool("b", false, "Blend between images")
+	fullscreen = flag.Bool("f", false, "Fullscreen mode")
 )
 
 var ntex int
@@ -138,10 +139,6 @@ func loadShader(shtype gl.Enum, src string) gl.Uint {
 	return sh
 }
 
-func setupvp(w, h int) {
-	gl.Viewport(0, 0, gl.Sizei(w), gl.Sizei(h))
-}
-
 func factor(t time.Time, tc0 time.Time, tc1 time.Time) gl.Float {
 	num := t.Sub(tc0)
 	den := tc1.Sub(tc0)
@@ -163,9 +160,33 @@ func write(wchan <-chan *ffvp8.Frame) {
 	gl.Init()
 	glfw.Init()
 	defer glfw.Terminate()
-	glfw.OpenWindow(w, h, 0, 0, 0, 0, 0, 0, glfw.Windowed)
+	mode := glfw.Windowed
+	ww := w
+	wh := h
+	if *fullscreen {
+		mode = glfw.Fullscreen
+		ww = 1440
+		wh = 900
+	} 
+	glfw.OpenWindow(ww, wh, 0, 0, 0, 0, 0, 0, mode)
 	defer glfw.CloseWindow()
-	glfw.SetWindowSizeCallback(setupvp)
+	glfw.SetWindowSizeCallback(func (ww, wh int) {
+		oaspect := float64(w)/float64(h)
+		haspect := float64(ww)/float64(wh)
+		vaspect := float64(wh)/float64(ww)
+		var scx,scy float64
+		if oaspect > haspect {
+			scx = 1
+			scy = haspect / oaspect
+		} else {
+			scx = vaspect * oaspect
+			scy = 1
+		}
+		gl.Viewport(0, 0, gl.Sizei(ww), gl.Sizei(wh))
+		gl.MatrixMode(gl.MODELVIEW)
+		gl.LoadIdentity()
+		gl.Scaled(gl.Double(scx), gl.Double(scy), 1)
+	})
 	if !*unsync {
 		glfw.SetSwapInterval(1)
 	}
@@ -179,6 +200,7 @@ func write(wchan <-chan *ffvp8.Frame) {
 	tbase := time.Now()
 	pimg := img
 	for glfw.WindowParam(glfw.Opened) == 1 {
+		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 		t := time.Now()
 		if *notc || t.After(tbase.Add(img.Timecode)) {
 			var ok bool
