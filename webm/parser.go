@@ -25,6 +25,16 @@ func (w *WebM) FindFirstVideoTrack() *TrackEntry {
 	return nil
 }
 
+func (w *WebM) FindFirstAudioTrack() *TrackEntry {
+	t := w.Segment.Tracks.TrackEntry
+	for i, l := 0, len(t); i < l; i++ {
+		if t[i].IsAudio() {
+			return &t[i]
+		}
+	}
+	return nil
+}
+
 type Header struct {
 	EBMLVersion        uint   `ebml:"4286" ebmldef:"1"`
 	EBMLReadVersion    uint   `ebml:"42f7" ebmldef:"1"`
@@ -67,6 +77,10 @@ type TrackEntry struct {
 
 func (t *TrackEntry) IsVideo() bool {
 	return t.TrackType == 1
+}
+
+func (t *TrackEntry) IsAudio() bool {
+	return t.TrackType == 2
 }
 
 type Video struct {

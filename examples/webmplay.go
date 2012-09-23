@@ -1,15 +1,19 @@
 package main
 
 import (
+	"code.google.com/p/portaudio-go/portaudio"
 	"code.google.com/p/ebml-go/common"
 	"code.google.com/p/ffvp8-go/ffvp8"
+	"code.google.com/p/ffvorbis-go/ffvorbis"
 	"flag"
 	gl "github.com/chsc/gogl/gl21"
 	"github.com/jteeuwen/glfw"
 	"math"
 	"runtime"
 	"time"
+"log"
 )
+
 
 var (
 	unsync = flag.Bool("u", false, "Unsynchronized display")
@@ -147,7 +151,21 @@ func factor(t time.Time, tc0 time.Time, tc1 time.Time) gl.Float {
 	return gl.Float(res)
 }
 
-func write(wchan <-chan *ffvp8.Frame) {
+func apresent(wchan <-chan *ffvorbis.Samples) {
+	chk := func(err error) { if err != nil { panic(err) } }
+	aw AudioWriter
+	stream, err := portaudio.OpenDefaultStream(1, 1, 44100, 128, &aw)
+	chk(err)
+	defer stream.Close()
+	chk(stream.Start())
+	defer stream.Stop()
+	for aw.active {
+		runtime.Gosched()
+	}
+	
+}
+
+func vpresent(wchan <-chan *ffvp8.Frame) {
 	if *blend {
 		ntex = 6
 	} else {
@@ -232,5 +250,7 @@ func write(wchan <-chan *ffvp8.Frame) {
 }
 
 func main() {
-	common.Main(write)
+	dev := C.alcOpenDevice((*C.ALCchar)(C.CString("")))
+	log.Println(dev)
+	common.Main(vpresent, apresent)
 }
