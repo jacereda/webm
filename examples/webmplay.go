@@ -6,12 +6,18 @@ import (
 	"flag"
 	gl "github.com/chsc/gogl/gl21"
 	"github.com/jteeuwen/glfw"
+	"math"
 	"runtime"
 	"time"
 )
 
-var unsync = flag.Bool("u", false, "Unsynchronized display")
-var notc = flag.Bool("t", false, "Ignore timecodes")
+var (
+	unsync = flag.Bool("u", false, "Unsynchronized display")
+	notc   = flag.Bool("t", false, "Ignore timecodes")
+	blend  = flag.Bool("b", false, "Blend between images")
+)
+
+var ntex int
 
 const vss = `
 void main() {
@@ -20,29 +26,53 @@ void main() {
 }
 `
 
-const fss = `
-uniform sampler2D ytex;
-uniform sampler2D cbtex;
-uniform sampler2D crtex;
-
+const ycbcr2rgb = `
 const mat3 ycbcr2rgb = mat3(
                           1.164, 0, 1.596,
                           1.164, -0.392, -0.813,
                           1.164, 2.017, 0.0
                           );
 const float ysub = 0.0625;
-void main() {
-   float y = texture2D(ytex, gl_TexCoord[0].st).r;
-   float cb = texture2D(cbtex, gl_TexCoord[0].st).r;
-   float cr = texture2D(crtex, gl_TexCoord[0].st).r;
-   vec3 ycbcr = vec3(y - ysub, cb - 0.5, cr - 0.5);
-   vec3 rgb = ycbcr * ycbcr2rgb;
-   gl_FragColor = vec4(rgb,1.0);
+vec3 ycbcr2rgb(vec3 c) {
+   vec3 ycbcr = vec3(c.x - ysub, c.y - 0.5, c.z - 0.5);
+   return ycbcr * ycbcr2rgb;
 }
 `
 
-func texinit(id gl.Uint) {
-	gl.BindTexture(gl.TEXTURE_2D, id)
+const fss = ycbcr2rgb + `
+uniform sampler2D yt0;
+uniform sampler2D cbt0;
+uniform sampler2D crt0;
+
+void main() {
+   vec3 c = vec3(texture2D(yt0, gl_TexCoord[0].st).r,
+                 texture2D(cbt0, gl_TexCoord[0].st).r,
+                 texture2D(crt0, gl_TexCoord[0].st).r);
+   gl_FragColor = vec4(ycbcr2rgb(c), 1.0);
+}
+`
+const bfss = ycbcr2rgb + `
+uniform sampler2D yt1;
+uniform sampler2D cbt1;
+uniform sampler2D crt1;
+uniform sampler2D yt0;
+uniform sampler2D cbt0;
+uniform sampler2D crt0;
+uniform float factor;
+
+void main() {
+   vec3 c0 = vec3(texture2D(yt0, gl_TexCoord[0].st).r,
+                  texture2D(cbt0, gl_TexCoord[0].st).r,
+                  texture2D(crt0, gl_TexCoord[0].st).r);
+   vec3 c1 = vec3(texture2D(yt1, gl_TexCoord[0].st).r,
+                  texture2D(cbt1, gl_TexCoord[0].st).r,
+                  texture2D(crt1, gl_TexCoord[0].st).r);
+   gl_FragColor = vec4(ycbcr2rgb(mix(c0, c1, factor)), 1);
+}
+`
+
+func texinit(id int) {
+	gl.BindTexture(gl.TEXTURE_2D, gl.Uint(id))
 	gl.TexParameterf(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
 	gl.TexParameterf(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
 	gl.TexParameterf(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
@@ -50,17 +80,32 @@ func texinit(id gl.Uint) {
 	return
 }
 
-func shinit() {
+func shinit() gl.Int {
 	vs := loadShader(gl.VERTEX_SHADER, vss)
-	fs := loadShader(gl.FRAGMENT_SHADER, fss)
+	var sfs string
+	if *blend {
+		sfs = bfss
+	} else {
+		sfs = fss
+	}
+	fs := loadShader(gl.FRAGMENT_SHADER, sfs)
 	prg := gl.CreateProgram()
 	gl.AttachShader(prg, vs)
 	gl.AttachShader(prg, fs)
 	gl.LinkProgram(prg)
+	var l int
+	if *blend {
+		l = 6
+	} else {
+		l = 3
+	}
 	gl.UseProgram(prg)
-	gl.Uniform1i(0, 0)
-	gl.Uniform1i(1, 1)
-	gl.Uniform1i(2, 2)
+	names := []string{"yt0", "cbt0", "crt0", "yt1", "cbt1", "crt1"}
+	for i := 0; i < l; i++ {
+		loc := gl.GetUniformLocation(prg, gl.GLString(names[i]))
+		gl.Uniform1i(loc, gl.Int(i))
+	}
+	return gl.GetUniformLocation(prg, gl.GLString("factor"))
 }
 
 func upload(id gl.Uint, data []byte, stride int, w int, h int) {
@@ -97,7 +142,21 @@ func setupvp(w, h int) {
 	gl.Viewport(0, 0, gl.Sizei(w), gl.Sizei(h))
 }
 
+func factor(t time.Time, tc0 time.Time, tc1 time.Time) gl.Float {
+	num := t.Sub(tc0)
+	den := tc1.Sub(tc0)
+	res := num.Seconds() / den.Seconds()
+	res = math.Max(res, 0)
+	res = math.Min(res, 1)
+	return gl.Float(res)
+}
+
 func write(wchan <-chan *ffvp8.Frame) {
+	if *blend {
+		ntex = 6
+	} else {
+		ntex = 3
+	}
 	img := <-wchan
 	w := img.Rect.Dx()
 	h := img.Rect.Dy()
@@ -111,30 +170,44 @@ func write(wchan <-chan *ffvp8.Frame) {
 		glfw.SetSwapInterval(1)
 	}
 	glfw.SetWindowTitle("webmplay")
-	texinit(1)
-	texinit(2)
-	texinit(3)
-	shinit()
+	for i := 0; i < ntex; i++ {
+		texinit(i + 1)
+	}
+	factorloc := shinit()
 	initquad()
 	gl.Enable(gl.TEXTURE_2D)
 	tbase := time.Now()
+	pimg := img
 	for glfw.WindowParam(glfw.Opened) == 1 {
+		t := time.Now()
+		if *notc || t.After(tbase.Add(img.Timecode)) {
+			var ok bool
+			pimg = img
+			img, ok = <-wchan
+			if !ok {
+				return
+			}
+		}
 		gl.ActiveTexture(gl.TEXTURE0)
 		upload(1, img.Y, img.YStride, w, h)
 		gl.ActiveTexture(gl.TEXTURE1)
 		upload(2, img.Cb, img.CStride, w/2, h/2)
 		gl.ActiveTexture(gl.TEXTURE2)
 		upload(3, img.Cr, img.CStride, w/2, h/2)
+		if *blend {
+			gl.Uniform1f(factorloc, factor(t,
+				tbase.Add(pimg.Timecode),
+				tbase.Add(img.Timecode)))
+			gl.ActiveTexture(gl.TEXTURE3)
+			upload(1, pimg.Y, pimg.YStride, w, h)
+			gl.ActiveTexture(gl.TEXTURE4)
+			upload(2, pimg.Cb, pimg.CStride, w/2, h/2)
+			gl.ActiveTexture(gl.TEXTURE5)
+			upload(3, pimg.Cr, pimg.CStride, w/2, h/2)
+		}
 		gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
 		runtime.GC()
 		glfw.SwapBuffers()
-		if *notc || time.Now().After(tbase.Add(img.Timecode)) {
-			var ok bool
-			img, ok = <-wchan
-			if !ok {
-				break
-			}
-		}
 	}
 }
 
