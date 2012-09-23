@@ -183,7 +183,6 @@ func write(wchan <-chan *ffvp8.Frame) {
 			scy = 1
 		}
 		gl.Viewport(0, 0, gl.Sizei(ww), gl.Sizei(wh))
-		gl.MatrixMode(gl.MODELVIEW)
 		gl.LoadIdentity()
 		gl.Scaled(gl.Double(scx), gl.Double(scy), 1)
 	})
