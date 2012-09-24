@@ -287,7 +287,6 @@ func apresent(wchan <-chan *ffvorbis.Samples) {
 				C.alSourcePlay(src)
 			}
 		}
-		C.alcProcessContext(ctx)
 	}
 }
 
