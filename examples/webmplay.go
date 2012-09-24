@@ -2,6 +2,7 @@ package main
 
 import (
 	"code.google.com/p/ebml-go/common"
+	"code.google.com/p/ebml-go/webm"
 	"code.google.com/p/ffvorbis-go/ffvorbis"
 	"code.google.com/p/ffvp8-go/ffvp8"
 	"flag"
@@ -242,7 +243,7 @@ func vpresent(wchan <-chan *ffvp8.Frame) {
 
 var dev *C.ALCdevice
 
-func apresent(wchan <-chan *ffvorbis.Samples) {
+func apresent(wchan <-chan *ffvorbis.Samples, audio *webm.Audio) {
 	ctx := C.alcCreateContext(dev, nil)
 	defer C.alcDestroyContext(ctx)
 	C.alcMakeContextCurrent(ctx)
@@ -274,8 +275,10 @@ func apresent(wchan <-chan *ffvorbis.Samples) {
 		}
 		b := buf[curr%nbuf]
 		curr++
-		C.alBufferData(b, C.AL_FORMAT_MONO16,
-			unsafe.Pointer(&p.Data[0]), C.ALsizei(2*len(p.Data)), 44100)
+		fmt := map[uint]C.ALenum{1: C.AL_FORMAT_MONO16, 2: C.AL_FORMAT_STEREO16}
+		C.alBufferData(b, fmt[audio.Channels],
+			unsafe.Pointer(&p.Data[0]), C.ALsizei(2*len(p.Data)), 
+			C.ALsizei(audio.SamplingFrequency))
 		C.alSourceQueueBuffers(src, 1, &b)
 		switch {
 		case curr == nbuf:

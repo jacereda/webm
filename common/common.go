@@ -15,7 +15,8 @@ var (
 	nf = flag.Int("n", 0x7fffffff, "Number of frames")
 )
 
-const chancap = 4
+const chancap = 2
+const achancap = 16
 
 func vdecode(dec *ffvp8.Decoder, 
 	dchan <-chan webm.Packet, wchan chan<- *ffvp8.Frame) {
@@ -64,7 +65,7 @@ func read(vtrack *webm.TrackEntry, atrack *webm.TrackEntry,
 }
 
 func Main(vpresent func(ch <-chan *ffvp8.Frame), 
-	apresent func(ch <-chan *ffvorbis.Samples)) {
+	apresent func(ch <-chan *ffvorbis.Samples, audio *webm.Audio)) {
 	flag.Parse()
 
 	var err error
@@ -78,7 +79,7 @@ func Main(vpresent func(ch <-chan *ffvp8.Frame),
 	pchan := webm.Parse(br, &wm)
 
 	vdchan := make(chan webm.Packet, chancap)
-	adchan := make(chan webm.Packet, chancap)
+	adchan := make(chan webm.Packet, achancap)
 	wchan := make(chan *ffvp8.Frame, chancap)
 	awchan := make(chan *ffvorbis.Samples, chancap)
 
@@ -99,7 +100,7 @@ func Main(vpresent func(ch <-chan *ffvp8.Frame),
 		go adecode(ffvorbis.NewDecoder(atrack.CodecPrivate), adchan, awchan)
 	}
 	if apresent != nil {
-		go apresent(awchan)
+		go apresent(awchan, &atrack.Audio)
 	}
 	vpresent(wchan)
 }
