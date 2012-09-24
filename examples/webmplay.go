@@ -1,24 +1,30 @@
 package main
 
 import (
-	"code.google.com/p/portaudio-go/portaudio"
 	"code.google.com/p/ebml-go/common"
-	"code.google.com/p/ffvp8-go/ffvp8"
 	"code.google.com/p/ffvorbis-go/ffvorbis"
+	"code.google.com/p/ffvp8-go/ffvp8"
 	"flag"
 	gl "github.com/chsc/gogl/gl21"
 	"github.com/jteeuwen/glfw"
 	"math"
 	"runtime"
 	"time"
-//"fmt"
+//	"fmt"
+	"unsafe"
 )
 
+/*
+ #cgo LDFLAGS: -framework OpenAL
+#include <OpenAL/al.h>
+#include <OpenAL/alc.h>
+*/
+import "C"
 
 var (
-	unsync = flag.Bool("u", false, "Unsynchronized display")
-	notc   = flag.Bool("t", false, "Ignore timecodes")
-	blend  = flag.Bool("b", false, "Blend between images")
+	unsync     = flag.Bool("u", false, "Unsynchronized display")
+	notc       = flag.Bool("t", false, "Ignore timecodes")
+	blend      = flag.Bool("b", false, "Blend between images")
 	fullscreen = flag.Bool("f", false, "Fullscreen mode")
 )
 
@@ -151,30 +157,6 @@ func factor(t time.Time, tc0 time.Time, tc1 time.Time) gl.Float {
 	return gl.Float(res)
 }
 
-type AudioWriter struct {
-	ch <-chan *ffvorbis.Samples
-	active bool
-}
-
-func (aw *AudioWriter) ProcessAudio(in, out []float32) {
-	var p *ffvorbis.Samples
-	p,aw.active = <- aw.ch
-	copy(out, p.Data)
-}
-
-func apresent(wchan <-chan *ffvorbis.Samples) {
-	chk := func(err error) { if err != nil { panic(err) } }
-	aw := AudioWriter{wchan, true}
-	stream,err := portaudio.OpenDefaultStream(0, 1, 44100, 1024, &aw)
-	defer stream.Close()
-	chk(err)
-	chk(stream.Start())
-	defer stream.Stop()
-	for aw.active {
-		time.Sleep(time.Second)
-	}
-}
-
 func vpresent(wchan <-chan *ffvp8.Frame) {
 	if *blend {
 		ntex = 6
@@ -194,14 +176,14 @@ func vpresent(wchan <-chan *ffvp8.Frame) {
 		mode = glfw.Fullscreen
 		ww = 1440
 		wh = 900
-	} 
+	}
 	glfw.OpenWindow(ww, wh, 0, 0, 0, 0, 0, 0, mode)
 	defer glfw.CloseWindow()
-	glfw.SetWindowSizeCallback(func (ww, wh int) {
-		oaspect := float64(w)/float64(h)
-		haspect := float64(ww)/float64(wh)
-		vaspect := float64(wh)/float64(ww)
-		var scx,scy float64
+	glfw.SetWindowSizeCallback(func(ww, wh int) {
+		oaspect := float64(w) / float64(h)
+		haspect := float64(ww) / float64(wh)
+		vaspect := float64(wh) / float64(ww)
+		var scx, scy float64
 		if oaspect > haspect {
 			scx = 1
 			scy = haspect / oaspect
@@ -256,6 +238,57 @@ func vpresent(wchan <-chan *ffvp8.Frame) {
 		gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
 		runtime.GC()
 		glfw.SwapBuffers()
+	}
+}
+
+func apresent(wchan <-chan *ffvorbis.Samples) {
+	dev := C.alcOpenDevice(nil)
+	defer C.alcCloseDevice(dev)
+	ctx := C.alcCreateContext(dev, nil)
+	defer C.alcDestroyContext(ctx)
+	C.alcMakeContextCurrent(ctx)
+	defer C.alcMakeContextCurrent(nil)
+	C.alListener3f(C.AL_POSITION, 0, 0, 0)
+	C.alListener3f(C.AL_VELOCITY, 0, 0, 0)
+	C.alListener3f(C.AL_ORIENTATION, 0, 0, -1)
+	var src C.ALuint
+	C.alGenSources(1, &src)
+	C.alSourcef(src, C.AL_PITCH, 1)
+	C.alSourcef(src, C.AL_GAIN, 1)
+	C.alSource3f(src, C.AL_POSITION, 0, 0, 0)
+	C.alSource3f(src, C.AL_VELOCITY, 0, 0, 0)
+	C.alSourcei(src, C.AL_LOOPING, C.AL_FALSE)
+	const nbuf = 16
+	var buf [nbuf]C.ALuint
+	C.alGenBuffers(nbuf, &buf[0])
+	curr := 0
+	for p := range wchan {
+		var proc C.ALint
+		proc = 0
+		if curr >= nbuf {
+			for proc == 0 {
+				C.alGetSourcei(src, C.AL_BUFFERS_PROCESSED, &proc)
+				time.Sleep(time.Millisecond)
+			}
+			var ub C.ALuint
+			C.alSourceUnqueueBuffers(src, 1, &ub)
+		}
+		b := buf[curr%nbuf]
+		curr++
+		C.alBufferData(b, C.AL_FORMAT_MONO16,
+			unsafe.Pointer(&p.Data[0]), C.ALsizei(2*len(p.Data)), 44100)
+		C.alSourceQueueBuffers(src, 1, &b)
+		switch {
+		case curr == nbuf:
+			C.alSourcePlay(src)
+		case curr > nbuf:
+			var state C.ALint
+			C.alGetSourcei(src, C.AL_SOURCE_STATE, &state)
+			if state != C.AL_PLAYING {
+				C.alSourcePlay(src)
+			}
+		}
+		C.alcProcessContext(ctx)
 	}
 }
 
