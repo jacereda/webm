@@ -15,7 +15,7 @@ var (
 	nf = flag.Int("n", 0x7fffffff, "Number of frames")
 )
 
-const chancap = 0
+const chancap = 4
 
 func vdecode(dec *ffvp8.Decoder, 
 	dchan <-chan webm.Packet, wchan chan<- *ffvp8.Frame) {
@@ -32,7 +32,7 @@ func adecode(dec *ffvorbis.Decoder,
 	adchan <-chan webm.Packet, awchan chan<- *ffvorbis.Samples) {
 	for pkt := range adchan {
 		buf := dec.Decode(pkt.Data, pkt.Timecode)
-		if !pkt.Invisible {
+		if buf != nil && !pkt.Invisible {
 			awchan <- buf
 		}
 	}

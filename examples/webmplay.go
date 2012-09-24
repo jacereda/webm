@@ -11,7 +11,7 @@ import (
 	"math"
 	"runtime"
 	"time"
-"log"
+//"fmt"
 )
 
 
@@ -151,18 +151,28 @@ func factor(t time.Time, tc0 time.Time, tc1 time.Time) gl.Float {
 	return gl.Float(res)
 }
 
+type AudioWriter struct {
+	ch <-chan *ffvorbis.Samples
+	active bool
+}
+
+func (aw *AudioWriter) ProcessAudio(in, out []float32) {
+	var p *ffvorbis.Samples
+	p,aw.active = <- aw.ch
+	copy(out, p.Data)
+}
+
 func apresent(wchan <-chan *ffvorbis.Samples) {
 	chk := func(err error) { if err != nil { panic(err) } }
-	aw AudioWriter
-	stream, err := portaudio.OpenDefaultStream(1, 1, 44100, 128, &aw)
-	chk(err)
+	aw := AudioWriter{wchan, true}
+	stream,err := portaudio.OpenDefaultStream(0, 1, 44100, 1024, &aw)
 	defer stream.Close()
+	chk(err)
 	chk(stream.Start())
 	defer stream.Stop()
 	for aw.active {
-		runtime.Gosched()
+		time.Sleep(time.Second)
 	}
-	
 }
 
 func vpresent(wchan <-chan *ffvp8.Frame) {
@@ -250,7 +260,5 @@ func vpresent(wchan <-chan *ffvp8.Frame) {
 }
 
 func main() {
-	dev := C.alcOpenDevice((*C.ALCchar)(C.CString("")))
-	log.Println(dev)
 	common.Main(vpresent, apresent)
 }
