@@ -10,8 +10,7 @@ import (
 	"math"
 	"runtime"
 	"time"
-//	"fmt"
-//	"unsafe"
+	"unsafe"
 )
 
 /*
@@ -241,9 +240,9 @@ func vpresent(wchan <-chan *ffvp8.Frame) {
 	}
 }
 
+var dev *C.ALCdevice
+
 func apresent(wchan <-chan *ffvorbis.Samples) {
-	dev := C.alcOpenDevice(nil)
-	defer C.alcCloseDevice(dev)
 	ctx := C.alcCreateContext(dev, nil)
 	defer C.alcDestroyContext(ctx)
 	C.alcMakeContextCurrent(ctx)
@@ -261,9 +260,8 @@ func apresent(wchan <-chan *ffvorbis.Samples) {
 	const nbuf = 16
 	var buf [nbuf]C.ALuint
 	C.alGenBuffers(nbuf, &buf[0])
-//	curr := 0
+	curr := 0
 	for p := range wchan {
-/*
 		var proc C.ALint
 		proc = 0
 		if curr >= nbuf {
@@ -290,10 +288,11 @@ func apresent(wchan <-chan *ffvorbis.Samples) {
 			}
 		}
 		C.alcProcessContext(ctx)
-*/
 	}
 }
 
 func main() {
+	dev = C.alcOpenDevice(nil)
+	defer C.alcCloseDevice(dev)
 	common.Main(vpresent, apresent)
 }
