@@ -2,7 +2,6 @@ package main
 
 import (
 	"code.google.com/p/ebml-go/common"
-	"code.google.com/p/ebml-go/webm"
 	"code.google.com/p/ffvorbis-go/ffvorbis"
 	"code.google.com/p/ffvp8-go/ffvp8"
 	"flag"
@@ -15,7 +14,7 @@ import (
 )
 
 /*
- #cgo LDFLAGS: -framework OpenAL
+#cgo darwin LDFLAGS: -framework OpenAL
 #include <OpenAL/al.h>
 #include <OpenAL/alc.h>
 */
@@ -213,9 +212,12 @@ func vpresent(wchan <-chan *ffvp8.Frame) {
 		if *notc || t.After(tbase.Add(img.Timecode)) {
 			var ok bool
 			pimg = img
-			img, ok = <-wchan
-			if !ok {
-				return
+			img = nil
+			for img == nil {
+				img, ok = <-wchan
+				if !ok {
+					return
+				}
 			}
 		}
 		gl.ActiveTexture(gl.TEXTURE0)
@@ -243,7 +245,7 @@ func vpresent(wchan <-chan *ffvp8.Frame) {
 
 var dev *C.ALCdevice
 
-func apresent(wchan <-chan *ffvorbis.Samples, audio *webm.Audio) {
+func apresent(wchan <-chan *ffvorbis.Samples) {
 	ctx := C.alcCreateContext(dev, nil)
 	defer C.alcDestroyContext(ctx)
 	C.alcMakeContextCurrent(ctx)
@@ -275,10 +277,22 @@ func apresent(wchan <-chan *ffvorbis.Samples, audio *webm.Audio) {
 		}
 		b := buf[curr%nbuf]
 		curr++
-		fmt := map[uint]C.ALenum{1: C.AL_FORMAT_MONO16, 2: C.AL_FORMAT_STEREO16}
-		C.alBufferData(b, fmt[audio.Channels],
-			unsafe.Pointer(&p.Data[0]), C.ALsizei(2*len(p.Data)), 
-			C.ALsizei(audio.SamplingFrequency))
+		afmt := C.ALenum(0)
+		switch p.Format {
+		case ffvorbis.Int16:
+			afmt = map[uint]C.ALenum{
+			1: C.AL_FORMAT_MONO16, 
+			2: C.AL_FORMAT_STEREO16,
+			}[p.Channels]
+		case ffvorbis.Float32:
+			afmt = map[uint]C.ALenum{
+			1: 0x10010, // AL_FORMAT_MONO_FLOAT32
+			2: 0x10011, // AL_FORMAT_STEREO_FLOAT32
+			}[p.Channels]
+		}
+		C.alBufferData(b, afmt,
+			unsafe.Pointer(&p.Data[0]), C.ALsizei(len(p.Data)),
+			C.ALsizei(p.Frequency))
 		C.alSourceQueueBuffers(src, 1, &b)
 		switch {
 		case curr == nbuf:
