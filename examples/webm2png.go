@@ -31,5 +31,6 @@ func write(ch <-chan *ffvp8.Frame) {
 }
 
 func main() {
-	common.Main(write)
+	flag.Parse()
+	common.Main(write, nil)
 }
