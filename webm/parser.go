@@ -8,6 +8,7 @@ import (
 	"code.google.com/p/ebml-go/ebml"
 	"io"
 	"time"
+	"log"
 )
 
 type WebM struct {
@@ -165,21 +166,37 @@ type CueTrackPositions struct {
 	CueBlockNumber     uint `ebml:"5378" ebmldef:"1"`
 }
 
-func sendPackets(e *ebml.Element, rest *ebml.Element, tbase uint, ch chan<- Packet) {
+func sendPackets(e *ebml.Element, rest *ebml.Element, 
+	tbase time.Duration, ch chan<- Packet) {
 	var err error
 	var p Packet
+	curr := 0
 	for err == nil {
 		var hdr []byte
 		hdr, err = e.ReadData()
-		if len(hdr) > 4 {
+		if err != nil {
+			log.Println(err)
+		}
+		if err == nil && e.Id == 163 && len(hdr) > 4 {
 			p.Data = hdr[4:]
 			p.TrackNumber = uint(hdr[0]) & 0x7f
-			p.Timecode = time.Millisecond * time.Duration(
-				tbase + uint(hdr[1])<<8 + uint(hdr[2]))
-			p.Invisible = 1 == (hdr[3] & 0x80)
+			p.Timecode = tbase + time.Millisecond * time.Duration(
+				uint(hdr[1])<<8 + uint(hdr[2]))
+			p.Invisible = (hdr[3] & 8) != 0
+			p.Keyframe = (hdr[3] & 0x80) != 0
+			p.Discardable = (hdr[3] & 1) != 0
+			if (p.Discardable) {
+				log.Println("Discardable packet")
+			}
+			if 0 != ((hdr[3] >> 1) & 3) {
+				log.Panic("Lacing unimplemented")
+			}
 			ch <- p
+		} else {
+			log.Println("Unexpected packet")
 		}
 		e, err = rest.Next()
+		curr++
 	}
 }
 
@@ -191,7 +208,8 @@ func parseClusters(e *ebml.Element, rest *ebml.Element, ch chan<- Packet) {
 		if err != nil && err.Error() == "Reached payload" {
 			sendPackets(err.(ebml.ReachedPayloadError).First,
 				err.(ebml.ReachedPayloadError).Rest,
-				c.Timecode, ch)
+				time.Millisecond * time.Duration(c.Timecode),
+				ch)
 		}
 		e, err = rest.Next()
 	}
@@ -217,4 +235,6 @@ type Packet struct {
 	Timecode    time.Duration
 	TrackNumber uint
 	Invisible   bool
+	Keyframe bool
+	Discardable bool
 }

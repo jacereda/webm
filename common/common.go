@@ -16,25 +16,31 @@ var (
 )
 
 const chancap = 2
-const achancap = 1024
+const achancap = 8
 
 func vdecode(dec *ffvp8.Decoder, 
-	dchan <-chan webm.Packet, wchan chan<- *ffvp8.Frame) {
-	for pkt := range dchan {
+	vdchan <-chan webm.Packet, vwchan chan<- *ffvp8.Frame) {
+	for pkt := range vdchan {
 		img := dec.Decode(pkt.Data, pkt.Timecode)
 		if !pkt.Invisible {
-			wchan <- img
+			vwchan <- img
+		} else {
+			log.Println("Invisible video packet")
 		}
 	}
-	close(wchan)
+	close(vwchan)
 }
 
 func adecode(dec *ffvorbis.Decoder, 
 	adchan <-chan webm.Packet, awchan chan<- *ffvorbis.Samples) {
 	for pkt := range adchan {
 		buf := dec.Decode(pkt.Data, pkt.Timecode)
-		if buf != nil && !pkt.Invisible {
-			awchan <- buf
+		if buf != nil {
+			if !pkt.Invisible {
+				awchan <- buf
+			} else {
+				log.Println("Invisible audio packet")
+			}
 		}
 	}
 	close(awchan)
@@ -48,11 +54,11 @@ func read(vtrack *webm.TrackEntry, atrack *webm.TrackEntry,
 		if i >= *nf {
 			break
 		}
-		if vtrack != nil && pkt.TrackNumber == vtrack.TrackNumber {
+		if vdchan != nil && pkt.TrackNumber == vtrack.TrackNumber {
 			vdchan <- pkt
 			i++
 		}
-		if atrack != nil && pkt.TrackNumber == atrack.TrackNumber {
+		if adchan != nil && pkt.TrackNumber == atrack.TrackNumber {
 			adchan <- pkt
 		}
 	}
@@ -79,28 +85,34 @@ func Main(vpresent func(ch <-chan *ffvp8.Frame),
 	pchan := webm.Parse(br, &wm)
 
 	vdchan := make(chan webm.Packet, chancap)
+	vwchan := make(chan *ffvp8.Frame, chancap)
 	adchan := make(chan webm.Packet, achancap)
-	wchan := make(chan *ffvp8.Frame, chancap)
 	awchan := make(chan *ffvorbis.Samples, chancap)
 
 	vtrack := wm.FindFirstVideoTrack()
 	if vpresent == nil {
 		vtrack = nil
+		vdchan = nil
 	}
 	atrack := wm.FindFirstAudioTrack()
 	if apresent == nil {
 		atrack = nil
+		adchan = nil
 	}
 
 	go read(vtrack, atrack, pchan, vdchan, adchan)
 	if vtrack != nil {
-		go vdecode(ffvp8.NewDecoder(), vdchan, wchan)
+		go vdecode(ffvp8.NewDecoder(), vdchan, vwchan)
 	}
 	if atrack != nil {
 		go adecode(ffvorbis.NewDecoder(atrack.CodecPrivate), adchan, awchan)
 	}
-	if apresent != nil {
+	if apresent != nil && vpresent != nil {
 		go apresent(awchan)
 	}
-	vpresent(wchan)
+	if vpresent != nil {
+		vpresent(vwchan)
+	} else {
+		apresent(awchan)
+	}
 }

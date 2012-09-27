@@ -11,7 +11,6 @@ import (
 	"runtime"
 	"time"
 	"unsafe"
-//"fmt"
 )
 
 /*
@@ -261,15 +260,15 @@ func apresent(wchan <-chan *ffvorbis.Samples) {
 	C.alSource3f(src, C.AL_POSITION, 0, 0, 0)
 	C.alSource3f(src, C.AL_VELOCITY, 0, 0, 0)
 	C.alSourcei(src, C.AL_LOOPING, C.AL_FALSE)
-	const nbuf = 16
+	const nbuf = 8
 	var buf [nbuf]C.ALuint
 	C.alGenBuffers(nbuf, &buf[0])
 	curr := 0
 	for p := range wchan {
-		var proc C.ALint
-		proc = 0
 		b := buf[curr%nbuf]
 		if curr >= nbuf {
+			var proc C.ALint
+			proc = 0
 			for proc == 0 {
 				C.alGetSourcei(src, C.AL_BUFFERS_PROCESSED, &proc)
 				time.Sleep(time.Millisecond)
@@ -294,10 +293,12 @@ func apresent(wchan <-chan *ffvorbis.Samples) {
 			unsafe.Pointer(&p.Data[0]), C.ALsizei(len(p.Data)),
 			C.ALsizei(p.Frequency))
 		C.alSourceQueueBuffers(src, 1, &b)
-		var state C.ALint
-		C.alGetSourcei(src, C.AL_SOURCE_STATE, &state)
-		if state != C.AL_PLAYING {
-			C.alSourcePlay(src)
+		if curr >= nbuf {
+			var state C.ALint
+			C.alGetSourcei(src, C.AL_SOURCE_STATE, &state)
+			if state != C.AL_PLAYING {
+				C.alSourcePlay(src)
+			}
 		}
 	}
 }
