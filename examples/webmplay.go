@@ -2,6 +2,7 @@ package main
 
 import (
 	"code.google.com/p/ebml-go/common"
+	"code.google.com/p/ffvorbis-go/ffvorbis"
 	"code.google.com/p/ffvp8-go/ffvp8"
 	"flag"
 	gl "github.com/chsc/gogl/gl21"
@@ -9,13 +10,23 @@ import (
 	"math"
 	"runtime"
 	"time"
+	"unsafe"
 )
 
+/*
+#cgo darwin LDFLAGS: -framework OpenAL
+#include <OpenAL/al.h>
+#include <OpenAL/alc.h>
+*/
+import "C"
+
 var (
-	unsync = flag.Bool("u", false, "Unsynchronized display")
-	notc   = flag.Bool("t", false, "Ignore timecodes")
-	blend  = flag.Bool("b", false, "Blend between images")
+	unsync     = flag.Bool("u", false, "Unsynchronized display")
+	notc       = flag.Bool("t", false, "Ignore timecodes")
+	blend      = flag.Bool("b", false, "Blend between images")
 	fullscreen = flag.Bool("f", false, "Fullscreen mode")
+	justaudio = flag.Bool("a", false, "Just audio")
+	justvideo = flag.Bool("v", false, "Just video")
 )
 
 var ntex int
@@ -147,7 +158,7 @@ func factor(t time.Time, tc0 time.Time, tc1 time.Time) gl.Float {
 	return gl.Float(res)
 }
 
-func write(wchan <-chan *ffvp8.Frame) {
+func vpresent(wchan <-chan *ffvp8.Frame) {
 	if *blend {
 		ntex = 6
 	} else {
@@ -166,14 +177,14 @@ func write(wchan <-chan *ffvp8.Frame) {
 		mode = glfw.Fullscreen
 		ww = 1440
 		wh = 900
-	} 
+	}
 	glfw.OpenWindow(ww, wh, 0, 0, 0, 0, 0, 0, mode)
 	defer glfw.CloseWindow()
-	glfw.SetWindowSizeCallback(func (ww, wh int) {
-		oaspect := float64(w)/float64(h)
-		haspect := float64(ww)/float64(wh)
-		vaspect := float64(wh)/float64(ww)
-		var scx,scy float64
+	glfw.SetWindowSizeCallback(func(ww, wh int) {
+		oaspect := float64(w) / float64(h)
+		haspect := float64(ww) / float64(wh)
+		vaspect := float64(wh) / float64(ww)
+		var scx, scy float64
 		if oaspect > haspect {
 			scx = 1
 			scy = haspect / oaspect
@@ -203,9 +214,12 @@ func write(wchan <-chan *ffvp8.Frame) {
 		if *notc || t.After(tbase.Add(img.Timecode)) {
 			var ok bool
 			pimg = img
-			img, ok = <-wchan
-			if !ok {
-				return
+			img = nil
+			for img == nil {
+				img, ok = <-wchan
+				if !ok {
+					return
+				}
 			}
 		}
 		gl.ActiveTexture(gl.TEXTURE0)
@@ -231,6 +245,77 @@ func write(wchan <-chan *ffvp8.Frame) {
 	}
 }
 
+var dev *C.ALCdevice
+
+func apresent(wchan <-chan *ffvorbis.Samples) {
+	ctx := C.alcCreateContext(dev, nil)
+	defer C.alcDestroyContext(ctx)
+	C.alcMakeContextCurrent(ctx)
+	defer C.alcMakeContextCurrent(nil)
+	C.alListener3f(C.AL_POSITION, 0, 0, 0)
+	C.alListener3f(C.AL_VELOCITY, 0, 0, 0)
+	C.alListener3f(C.AL_ORIENTATION, 0, 0, -1)
+	var src C.ALuint
+	C.alGenSources(1, &src)
+	C.alSourcef(src, C.AL_PITCH, 1)
+	C.alSourcef(src, C.AL_GAIN, 1)
+	C.alSource3f(src, C.AL_POSITION, 0, 0, 0)
+	C.alSource3f(src, C.AL_VELOCITY, 0, 0, 0)
+	C.alSourcei(src, C.AL_LOOPING, C.AL_FALSE)
+	const nbuf = 8
+	var buf [nbuf]C.ALuint
+	C.alGenBuffers(nbuf, &buf[0])
+	curr := 0
+	for p := range wchan {
+		b := buf[curr%nbuf]
+		if curr >= nbuf {
+			var proc C.ALint
+			proc = 0
+			for proc == 0 {
+				C.alGetSourcei(src, C.AL_BUFFERS_PROCESSED, &proc)
+				time.Sleep(time.Millisecond)
+			}
+			C.alSourceUnqueueBuffers(src, 1, &b)
+		}
+		curr++
+		afmt := C.ALenum(0)
+		switch p.Format {
+		case ffvorbis.Int16:
+			afmt = map[uint]C.ALenum{
+			1: C.AL_FORMAT_MONO16, 
+			2: C.AL_FORMAT_STEREO16,
+			}[p.Channels]
+		case ffvorbis.Float32:
+			afmt = map[uint]C.ALenum{
+			1: 0x10010, // AL_FORMAT_MONO_FLOAT32
+			2: 0x10011, // AL_FORMAT_STEREO_FLOAT32
+			}[p.Channels]
+		}
+		C.alBufferData(b, afmt,
+			unsafe.Pointer(&p.Data[0]), C.ALsizei(len(p.Data)),
+			C.ALsizei(p.Frequency))
+		C.alSourceQueueBuffers(src, 1, &b)
+		if curr >= nbuf {
+			var state C.ALint
+			C.alGetSourcei(src, C.AL_SOURCE_STATE, &state)
+			if state != C.AL_PLAYING {
+				C.alSourcePlay(src)
+			}
+		}
+	}
+}
+
 func main() {
-	common.Main(write)
+	flag.Parse()
+	dev = C.alcOpenDevice(nil)
+	defer C.alcCloseDevice(dev)
+	vp := vpresent
+	ap := apresent
+	if *justaudio {
+		vp = nil
+	}
+	if *justvideo {
+		ap = nil
+	}
+	common.Main(vp, ap)
 }
