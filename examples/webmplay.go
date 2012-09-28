@@ -11,6 +11,7 @@ import (
 	"runtime"
 	"time"
 	"unsafe"
+	"log"
 )
 
 /*
@@ -279,20 +280,14 @@ func apresent(wchan <-chan *ffvorbis.Samples) {
 		}
 		curr++
 		afmt := C.ALenum(0)
-		switch p.Format {
-		case ffvorbis.Int16:
-			afmt = map[uint]C.ALenum{
-			1: C.AL_FORMAT_MONO16, 
-			2: C.AL_FORMAT_STEREO16,
-			}[p.Channels]
-		case ffvorbis.Float32:
-			afmt = map[uint]C.ALenum{
-			1: 0x10010, // AL_FORMAT_MONO_FLOAT32
-			2: 0x10011, // AL_FORMAT_STEREO_FLOAT32
-			}[p.Channels]
+		switch p.Channels {
+		case 1: afmt = 0x10010 // AL_FORMAT_MONO_FLOAT32
+		case 2: afmt = 0x10011 // AL_FORMAT_STEREO_FLOAT32
+		default:
+			log.Panic("Unsupported number of channels")
 		}
 		C.alBufferData(b, afmt,
-			unsafe.Pointer(&p.Data[0]), C.ALsizei(len(p.Data)),
+			unsafe.Pointer(&p.Data[0]), C.ALsizei(4*len(p.Data)),
 			C.ALsizei(p.Frequency))
 		C.alSourceQueueBuffers(src, 1, &b)
 		if curr >= nbuf {
