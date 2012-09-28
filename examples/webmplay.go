@@ -7,11 +7,11 @@ import (
 	"flag"
 	gl "github.com/chsc/gogl/gl21"
 	"github.com/jteeuwen/glfw"
+	"log"
 	"math"
 	"runtime"
 	"time"
 	"unsafe"
-	"log"
 )
 
 /*
@@ -26,8 +26,8 @@ var (
 	notc       = flag.Bool("t", false, "Ignore timecodes")
 	blend      = flag.Bool("b", false, "Blend between images")
 	fullscreen = flag.Bool("f", false, "Fullscreen mode")
-	justaudio = flag.Bool("a", false, "Just audio")
-	justvideo = flag.Bool("v", false, "Just video")
+	justaudio  = flag.Bool("a", false, "Just audio")
+	justvideo  = flag.Bool("v", false, "Just video")
 )
 
 var ntex int
@@ -281,8 +281,10 @@ func apresent(wchan <-chan *ffvorbis.Samples) {
 		curr++
 		afmt := C.ALenum(0)
 		switch p.Channels {
-		case 1: afmt = 0x10010 // AL_FORMAT_MONO_FLOAT32
-		case 2: afmt = 0x10011 // AL_FORMAT_STEREO_FLOAT32
+		case 1:
+			afmt = 0x10010 // AL_FORMAT_MONO_FLOAT32
+		case 2:
+			afmt = 0x10011 // AL_FORMAT_STEREO_FLOAT32
 		default:
 			log.Panic("Unsupported number of channels")
 		}

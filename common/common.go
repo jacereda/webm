@@ -28,26 +28,41 @@ func Main(vpresent func(ch <-chan *ffvp8.Frame),
 	br := bufio.NewReader(r)
 	pchan := webm.Parse(br, &wm)
 
-	vtrack := wm.FindFirstVideoTrack()
-	if vpresent == nil {
-		vtrack = nil
-	}
-	vstream := webm.NewStream(vtrack)
+	var streams []*webm.Stream
 
-	atrack := wm.FindFirstAudioTrack()
-	if apresent == nil {
-		atrack = nil
-	}
-	astream := webm.NewStream(atrack)
-	webm.Split(pchan, []*webm.Stream{vstream, astream})
-	vchan := webm.DecodeVideo(vstream)
-	achan := webm.DecodeAudio(astream)
-	if apresent != nil && vpresent != nil {
-		go apresent(achan)
-	}
+	var vtrack *webm.TrackEntry
+	var vstream *webm.VideoStream
 	if vpresent != nil {
-		vpresent(vchan)
-	} else {
-		apresent(achan)
+		vtrack = wm.FindFirstVideoTrack()
+	}
+	if vtrack != nil {
+		vstream = webm.NewVideoStream(vtrack)
+	}
+	if vstream != nil {
+		streams = append(streams, &vstream.Stream)
+	}
+
+	var astream *webm.AudioStream
+	var atrack *webm.TrackEntry
+	if apresent != nil {
+		atrack = wm.FindFirstAudioTrack()
+	}
+	if atrack != nil {
+		astream = webm.NewAudioStream(atrack)
+	}
+	if astream != nil {
+		streams = append(streams, &astream.Stream)
+	}
+
+	webm.Split(pchan, streams)
+
+	switch {
+	case astream != nil && vstream != nil:
+		go apresent(astream.Decode())
+		fallthrough
+	case vstream != nil:
+		vpresent(vstream.Decode())
+	case astream != nil:
+		apresent(astream.Decode())
 	}
 }

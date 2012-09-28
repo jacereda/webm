@@ -5,11 +5,9 @@ type Stream struct {
 	Track *TrackEntry
 }
 
-func NewStream(track *TrackEntry) *Stream {
-	if track == nil {
-		return nil
-	}
-	return &Stream{make(chan Packet, 4), track}
+func (s *Stream)init(track *TrackEntry) {
+	s.Chan = make(chan Packet, 4)
+	s.Track = track
 }
 
 func split(pchan <-chan Packet, streams []*Stream) {

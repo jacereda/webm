@@ -5,6 +5,16 @@ import (
 	"log"
 )
 
+type AudioStream struct {
+	Stream
+}
+
+func NewAudioStream(track *TrackEntry) *AudioStream {
+	var s AudioStream
+	s.Stream.init(track)
+	return &s
+}
+
 func adecode(dec *ffvorbis.Decoder,
 	in <-chan Packet, out chan<- *ffvorbis.Samples) {
 	for pkt := range in {
@@ -20,10 +30,7 @@ func adecode(dec *ffvorbis.Decoder,
 	close(out)
 }
 
-func DecodeAudio(s *Stream) <-chan *ffvorbis.Samples {
-	if s == nil {
-		return nil
-	}
+func (s *AudioStream) Decode() <-chan *ffvorbis.Samples {
 	out := make(chan *ffvorbis.Samples, 4)
 	dec := ffvorbis.NewDecoder(s.Track.CodecPrivate)
 	go adecode(dec, s.Chan, out)
