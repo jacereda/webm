@@ -12,7 +12,6 @@ import (
 	"runtime"
 	"time"
 	"code.google.com/p/ebml-go/webm"
-	"fmt"
 )
 
 var (
@@ -266,7 +265,6 @@ func (aw *AudioWriter) ProcessAudio(in, out []float32) {
 func apresent(wchan <-chan *ffvorbis.Samples, audio *webm.Audio) {
 	chk := func(err error) { if err != nil { panic(err) } }
 	aw := AudioWriter{wchan, true, nil, 0}
-	fmt.Println(audio)
 	stream,err := portaudio.OpenDefaultStream(0, int(audio.Channels), audio.SamplingFrequency, 0, &aw)
 	defer stream.Close()
 	chk(err)
