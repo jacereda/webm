@@ -16,7 +16,6 @@ var (
 )
 
 const chancap = 4
-const achancap = 32
 
 func vdecode(dec *ffvp8.Decoder, 
 	vdchan <-chan webm.Packet, vwchan chan<- *ffvp8.Frame) {
@@ -46,30 +45,6 @@ func adecode(dec *ffvorbis.Decoder,
 	close(awchan)
 }
 
-func read(vtrack *webm.TrackEntry, atrack *webm.TrackEntry, 
-	pchan <-chan webm.Packet, 
-	vdchan chan<- webm.Packet, adchan chan<- webm.Packet) {
-	i := 0
-	for pkt := range pchan {
-		if i >= *nf {
-			break
-		}
-		if vdchan != nil && pkt.TrackNumber == vtrack.TrackNumber {
-			vdchan <- pkt
-			i++
-		}
-		if adchan != nil && pkt.TrackNumber == atrack.TrackNumber {
-			adchan <- pkt
-		}
-	}
-	if vdchan != nil {
-		close(vdchan)
-	}
-	if adchan != nil {
-		close(adchan)
-	}
-}
-
 func Main(vpresent func(ch <-chan *ffvp8.Frame), 
 	apresent func(ch <-chan *ffvorbis.Samples)) {
 
@@ -83,28 +58,26 @@ func Main(vpresent func(ch <-chan *ffvp8.Frame),
 	br := bufio.NewReader(r)
 	pchan := webm.Parse(br, &wm)
 
-	vdchan := make(chan webm.Packet, chancap)
 	vwchan := make(chan *ffvp8.Frame, chancap)
-	adchan := make(chan webm.Packet, achancap)
 	awchan := make(chan *ffvorbis.Samples, chancap)
 
 	vtrack := wm.FindFirstVideoTrack()
 	if vpresent == nil {
 		vtrack = nil
-		vdchan = nil
 	}
+	vstream := webm.NewStream(vtrack)
+
 	atrack := wm.FindFirstAudioTrack()
 	if apresent == nil {
 		atrack = nil
-		adchan = nil
 	}
-
-	go read(vtrack, atrack, pchan, vdchan, adchan)
+        astream := webm.NewStream(atrack)
+        webm.Split(pchan, []*webm.Stream{vstream, astream})
 	if vtrack != nil {
-		go vdecode(ffvp8.NewDecoder(), vdchan, vwchan)
+		go vdecode(ffvp8.NewDecoder(), vstream.Chan, vwchan)
 	}
 	if atrack != nil {
-		go adecode(ffvorbis.NewDecoder(atrack.CodecPrivate), adchan, awchan)
+		go adecode(ffvorbis.NewDecoder(atrack.CodecPrivate), astream.Chan, awchan)
 	}
 	if apresent != nil && vpresent != nil {
 		go apresent(awchan)
