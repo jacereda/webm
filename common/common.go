@@ -71,7 +71,7 @@ func read(vtrack *webm.TrackEntry, atrack *webm.TrackEntry,
 }
 
 func Main(vpresent func(ch <-chan *ffvp8.Frame), 
-	apresent func(ch <-chan *ffvorbis.Samples)) {
+	apresent func(<-chan *ffvorbis.Samples, *webm.Audio)) {
 
 	var err error
 	var wm webm.WebM
@@ -107,11 +107,11 @@ func Main(vpresent func(ch <-chan *ffvp8.Frame),
 		go adecode(ffvorbis.NewDecoder(atrack.CodecPrivate), adchan, awchan)
 	}
 	if apresent != nil && vpresent != nil {
-		go apresent(awchan)
+		go apresent(awchan, &atrack.Audio)
 	}
 	if vpresent != nil {
 		vpresent(vwchan)
 	} else {
-		apresent(awchan)
+		apresent(awchan, &atrack.Audio)
 	}
 }
