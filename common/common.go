@@ -16,7 +16,7 @@ var (
 )
 
 func Main(vpresent func(ch <-chan *ffvp8.Frame),
-	apresent func(ch <-chan *ffvorbis.Samples)) {
+	apresent func(ch <-chan *ffvorbis.Samples, atrack *webm.Audio)) {
 
 	var err error
 	var wm webm.WebM
@@ -58,11 +58,11 @@ func Main(vpresent func(ch <-chan *ffvp8.Frame),
 
 	switch {
 	case astream != nil && vstream != nil:
-		go apresent(astream.Decode())
+		go apresent(astream.Decode(), &atrack.Audio)
 		fallthrough
 	case vstream != nil:
 		vpresent(vstream.Decode())
 	case astream != nil:
-		apresent(astream.Decode())
+		apresent(astream.Decode(), &atrack.Audio)
 	}
 }
