@@ -1,9 +1,8 @@
-
 package webm
 
 type Stream struct {
-	Chan chan Packet
-	track *TrackEntry
+	Chan  chan Packet
+	Track *TrackEntry
 }
 
 func NewStream(track *TrackEntry) *Stream {
@@ -15,13 +14,13 @@ func NewStream(track *TrackEntry) *Stream {
 
 func split(pchan <-chan Packet, streams []*Stream) {
 	for pkt := range pchan {
-		for _,s := range streams {
-			if pkt.TrackNumber == s.track.TrackNumber {
+		for _, s := range streams {
+			if pkt.TrackNumber == s.Track.TrackNumber {
 				s.Chan <- pkt
 			}
 		}
 	}
-	for _,s := range(streams) {
+	for _, s := range streams {
 		close(s.Chan)
 	}
 }
@@ -29,7 +28,7 @@ func split(pchan <-chan Packet, streams []*Stream) {
 func Split(pchan <-chan Packet, streams []*Stream) {
 	var fstreams []*Stream
 	// XXX Isn't there a filter()?
-	for _,s := range(streams) {
+	for _, s := range streams {
 		if s != nil {
 			fstreams = append(fstreams, s)
 		}
