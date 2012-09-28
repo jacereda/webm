@@ -20,8 +20,8 @@ var (
 	notc       = flag.Bool("t", false, "Ignore timecodes")
 	blend      = flag.Bool("b", false, "Blend between images")
 	fullscreen = flag.Bool("f", false, "Fullscreen mode")
-	justaudio = flag.Bool("a", false, "Just audio")
-	justvideo = flag.Bool("v", false, "Just video")
+	justaudio  = flag.Bool("a", false, "Just audio")
+	justvideo  = flag.Bool("v", false, "Just video")
 )
 
 var ntex int

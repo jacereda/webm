@@ -7,8 +7,8 @@ package webm
 import (
 	"code.google.com/p/ebml-go/ebml"
 	"io"
-	"time"
 	"log"
+	"time"
 )
 
 type WebM struct {
@@ -166,7 +166,7 @@ type CueTrackPositions struct {
 	CueBlockNumber     uint `ebml:"5378" ebmldef:"1"`
 }
 
-func sendPackets(e *ebml.Element, rest *ebml.Element, 
+func sendPackets(e *ebml.Element, rest *ebml.Element,
 	tbase time.Duration, ch chan<- Packet) {
 	var err error
 	var p Packet
@@ -180,12 +180,12 @@ func sendPackets(e *ebml.Element, rest *ebml.Element,
 		if err == nil && e.Id == 163 && len(hdr) > 4 {
 			p.Data = hdr[4:]
 			p.TrackNumber = uint(hdr[0]) & 0x7f
-			p.Timecode = tbase + time.Millisecond * time.Duration(
-				uint(hdr[1])<<8 + uint(hdr[2]))
+			p.Timecode = tbase + time.Millisecond*time.Duration(
+				uint(hdr[1])<<8+uint(hdr[2]))
 			p.Invisible = (hdr[3] & 8) != 0
 			p.Keyframe = (hdr[3] & 0x80) != 0
 			p.Discardable = (hdr[3] & 1) != 0
-			if (p.Discardable) {
+			if p.Discardable {
 				log.Println("Discardable packet")
 			}
 			if 0 != ((hdr[3] >> 1) & 3) {
@@ -208,7 +208,7 @@ func parseClusters(e *ebml.Element, rest *ebml.Element, ch chan<- Packet) {
 		if err != nil && err.Error() == "Reached payload" {
 			sendPackets(err.(ebml.ReachedPayloadError).First,
 				err.(ebml.ReachedPayloadError).Rest,
-				time.Millisecond * time.Duration(c.Timecode),
+				time.Millisecond*time.Duration(c.Timecode),
 				ch)
 		}
 		e, err = rest.Next()
@@ -216,7 +216,7 @@ func parseClusters(e *ebml.Element, rest *ebml.Element, ch chan<- Packet) {
 	close(ch)
 }
 
-func Parse(r io.Reader, m *WebM) (<-chan Packet) {
+func Parse(r io.Reader, m *WebM) <-chan Packet {
 	ch := make(chan Packet, 2)
 	e, err := ebml.RootElement(r)
 	if err == nil {
@@ -235,6 +235,6 @@ type Packet struct {
 	Timecode    time.Duration
 	TrackNumber uint
 	Invisible   bool
-	Keyframe bool
+	Keyframe    bool
 	Discardable bool
 }
