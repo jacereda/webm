@@ -15,8 +15,6 @@ import (
 	"fmt"
 )
 
-import "C"
-
 var (
 	unsync     = flag.Bool("u", false, "Unsynchronized display")
 	notc       = flag.Bool("t", false, "Ignore timecodes")
@@ -255,7 +253,6 @@ func (aw *AudioWriter) ProcessAudio(in, out []float32) {
 		if aw.curr == nil || aw.sofar == len(aw.curr.Data) {
 			aw.curr,aw.active = <- aw.ch
 			if aw.curr == nil {
-				fmt.Println("no packet yet")
 				return
 			}
 			aw.sofar = 0
@@ -263,7 +260,6 @@ func (aw *AudioWriter) ProcessAudio(in, out []float32) {
 		s := copy(out[sent:], aw.curr.Data[aw.sofar:])
 		sent += s
 		aw.sofar += s
-//		fmt.Println(s, sent, lo, aw.sofar, len(aw.curr.Data))
 	}
 }
 
