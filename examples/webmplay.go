@@ -244,11 +244,28 @@ type AudioWriter struct {
 	ch <-chan *ffvorbis.Samples
 	active bool
 	curr *ffvorbis.Samples
+	channels int
 	sofar int
 }
 
-func (aw *AudioWriter) ProcessAudio(in, out []float32) {
-	for sent,lo := 0,len(out); sent < lo; {
+func scopy(out []float32, in []float32, stride int) int {
+	lo := len(out)
+	li := (len(in) + stride - 1) / stride
+	var l int
+	if lo < li {
+		l = lo
+	} else {
+		l = li
+	}
+	for i,ii := 0,0; i < l; i++ {
+		out[i] = in[ii]
+		ii += stride
+	}
+	return l
+}
+
+func (aw *AudioWriter) ProcessAudio(in, out [][]float32) {
+	for sent,lo := 0,len(out[0]); sent < lo; {
 		if aw.curr == nil || aw.sofar == len(aw.curr.Data) {
 			aw.curr,aw.active = <- aw.ch
 			if aw.curr == nil {
@@ -256,16 +273,22 @@ func (aw *AudioWriter) ProcessAudio(in, out []float32) {
 			}
 			aw.sofar = 0
 		}
-		s := copy(out[sent:], aw.curr.Data[aw.sofar:])
+		var s int
+		for i := 0; i < aw.channels; i++ {
+			s = scopy(out[i][sent:], aw.curr.Data[aw.sofar+i:], 
+				aw.channels)
+		}
 		sent += s
-		aw.sofar += s
+		aw.sofar += aw.channels * s
 	}
 }
 
 func apresent(wchan <-chan *ffvorbis.Samples, audio *webm.Audio) {
 	chk := func(err error) { if err != nil { panic(err) } }
-	aw := AudioWriter{wchan, true, nil, 0}
-	stream,err := portaudio.OpenDefaultStream(0, int(audio.Channels), audio.SamplingFrequency, 0, &aw)
+	channels := int(audio.Channels)
+	aw := AudioWriter{wchan, true, nil, channels, 0}
+	stream,err := portaudio.OpenDefaultStream(0, channels, 
+		audio.SamplingFrequency, 0, &aw)
 	defer stream.Close()
 	chk(err)
 	chk(stream.Start())
