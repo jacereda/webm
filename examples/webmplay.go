@@ -248,15 +248,17 @@ type AudioWriter struct {
 	sofar int
 }
 
+func min(a,b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func scopy(out []float32, in []float32, stride int) int {
 	lo := len(out)
 	li := (len(in) + stride - 1) / stride
-	var l int
-	if lo < li {
-		l = lo
-	} else {
-		l = li
-	}
+	l := min(lo, li)
 	for i,ii := 0,0; i < l; i++ {
 		out[i] = in[ii]
 		ii += stride
