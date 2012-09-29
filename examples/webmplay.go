@@ -1,17 +1,17 @@
 package main
 
 import (
-	"code.google.com/p/portaudio-go/portaudio"
 	"code.google.com/p/ebml-go/common"
+	"code.google.com/p/ebml-go/webm"
 	"code.google.com/p/ffvorbis-go/ffvorbis"
 	"code.google.com/p/ffvp8-go/ffvp8"
+	"code.google.com/p/portaudio-go/portaudio"
 	"flag"
 	gl "github.com/chsc/gogl/gl21"
 	"github.com/jteeuwen/glfw"
 	"math"
 	"runtime"
 	"time"
-	"code.google.com/p/ebml-go/webm"
 )
 
 var (
@@ -239,16 +239,15 @@ func vpresent(wchan <-chan *ffvp8.Frame) {
 	}
 }
 
-
 type AudioWriter struct {
-	ch <-chan *ffvorbis.Samples
-	active bool
-	curr *ffvorbis.Samples
+	ch       <-chan *ffvorbis.Samples
+	active   bool
+	curr     *ffvorbis.Samples
 	channels int
-	sofar int
+	sofar    int
 }
 
-func min(a,b int) int {
+func min(a, b int) int {
 	if a < b {
 		return a
 	}
@@ -259,7 +258,7 @@ func scopy(out []float32, in []float32, stride int) int {
 	lo := len(out)
 	li := (len(in) + stride - 1) / stride
 	l := min(lo, li)
-	for i,ii := 0,0; i < l; i++ {
+	for i, ii := 0, 0; i < l; i++ {
 		out[i] = in[ii]
 		ii += stride
 	}
@@ -267,9 +266,9 @@ func scopy(out []float32, in []float32, stride int) int {
 }
 
 func (aw *AudioWriter) ProcessAudio(in, out [][]float32) {
-	for sent,lo := 0,len(out[0]); sent < lo; {
+	for sent, lo := 0, len(out[0]); sent < lo; {
 		if aw.curr == nil || aw.sofar == len(aw.curr.Data) {
-			aw.curr,aw.active = <- aw.ch
+			aw.curr, aw.active = <-aw.ch
 			if aw.curr == nil {
 				return
 			}
@@ -277,7 +276,7 @@ func (aw *AudioWriter) ProcessAudio(in, out [][]float32) {
 		}
 		var s int
 		for i := 0; i < aw.channels; i++ {
-			s = scopy(out[i][sent:], aw.curr.Data[aw.sofar+i:], 
+			s = scopy(out[i][sent:], aw.curr.Data[aw.sofar+i:],
 				aw.channels)
 		}
 		sent += s
@@ -286,10 +285,14 @@ func (aw *AudioWriter) ProcessAudio(in, out [][]float32) {
 }
 
 func apresent(wchan <-chan *ffvorbis.Samples, audio *webm.Audio) {
-	chk := func(err error) { if err != nil { panic(err) } }
+	chk := func(err error) {
+		if err != nil {
+			panic(err)
+		}
+	}
 	channels := int(audio.Channels)
 	aw := AudioWriter{wchan, true, nil, channels, 0}
-	stream,err := portaudio.OpenDefaultStream(0, channels, 
+	stream, err := portaudio.OpenDefaultStream(0, channels,
 		audio.SamplingFrequency, 0, &aw)
 	defer stream.Close()
 	chk(err)
