@@ -55,11 +55,10 @@ func Main(vpresent func(ch <-chan *ffvp8.Frame),
 	}
 
 	webm.Split(pchan, streams)
-
 	switch {
 	case astream != nil && vstream != nil:
 		go apresent(astream.Decode(), &atrack.Audio)
-		fallthrough
+		vpresent(vstream.Decode())
 	case vstream != nil:
 		vpresent(vstream.Decode())
 	case astream != nil:
