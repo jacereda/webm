@@ -12,7 +12,6 @@ import (
 
 var (
 	In = flag.String("i", "", "Input file")
-	nf = flag.Int("n", 0x7fffffff, "Number of frames")
 )
 
 func Main(vpresent func(ch <-chan *ffvp8.Frame),
