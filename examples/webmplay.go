@@ -207,6 +207,9 @@ func vpresent(wchan <-chan *ffvp8.Frame) {
 		t := time.Now()
 		if *notc || t.After(tbase.Add(img.Timecode)) {
 			var ok bool
+			//			if pimg != img {
+			//				pimg.Release()
+			//			}
 			pimg = img
 			img = nil
 			for img == nil {
