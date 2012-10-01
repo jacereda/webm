@@ -250,26 +250,8 @@ type AudioWriter struct {
 	sofar    int
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-func scopy(out []float32, in []float32, stride int) int {
-	lo := len(out)
-	li := (len(in) + stride - 1) / stride
-	l := min(lo, li)
-	for i, ii := 0, 0; i < l; i++ {
-		out[i] = in[ii]
-		ii += stride
-	}
-	return l
-}
-
-func (aw *AudioWriter) ProcessAudio(in, out [][]float32) {
-	for sent, lo := 0, len(out[0]); sent < lo; {
+func (aw *AudioWriter) ProcessAudio(in, out []float32) {
+	for sent, lo := 0, len(out); sent < lo; {
 		if aw.curr == nil || aw.sofar == len(aw.curr.Data) {
 			aw.curr, aw.active = <-aw.ch
 			if aw.curr == nil {
@@ -277,13 +259,9 @@ func (aw *AudioWriter) ProcessAudio(in, out [][]float32) {
 			}
 			aw.sofar = 0
 		}
-		var s int
-		for i := 0; i < aw.channels; i++ {
-			s = scopy(out[i][sent:], aw.curr.Data[aw.sofar+i:],
-				aw.channels)
-		}
+		s := copy(out[sent:], aw.curr.Data[aw.sofar:])
 		sent += s
-		aw.sofar += aw.channels * s
+		aw.sofar += s
 	}
 }
 
