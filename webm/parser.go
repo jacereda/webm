@@ -188,8 +188,9 @@ func sendPackets(e *ebml.Element, rest *ebml.Element,
 			if p.Discardable {
 				log.Println("Discardable packet")
 			}
-			if 0 != ((hdr[3] >> 1) & 3) {
-				log.Panic("Lacing unimplemented")
+			lacing := (hdr[3] >> 1) & 3
+			if 0 != lacing {
+				log.Panic("Lacing unimplemented: ", lacing)
 			}
 			ch <- p
 		} else {
