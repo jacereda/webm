@@ -204,6 +204,37 @@ func sendLaces(p *Packet, d []byte, sz []int, tbase time.Duration, ch chan<- Pac
 	ch <- *p
 }
 
+func parseXiphSizes(d []byte) (sz []int, curr int) {
+	laces := int(uint(d[4]))
+	sz = make([]int, laces)
+	curr = 5
+	for i := 0; i < laces; i++ {
+		for d[curr] == 255 {
+			sz[i] += 255
+			curr++
+		}
+		sz[i] += int(uint(d[curr]))
+		curr++
+	}
+	return
+}
+
+func parseEBMLSizes(d []byte) (sz []int, curr int) {
+	laces := int(uint(d[4]))
+	sz = make([]int, laces)
+	curr = 5
+	var rem int
+	sz[0], rem = laceSize(d[curr:])
+	for i := 1; i < laces; i++ {
+		curr += rem + 1
+		var dsz int
+		dsz, rem = laceDelta(d[curr:])
+		sz[i] = sz[i-1] + dsz
+	}
+	curr += rem + 1
+	return
+}
+
 func sendBlock(hdr []byte, tbase time.Duration, ch chan<- Packet) {
 	var p Packet
 	p.TrackNumber = uint(hdr[0]) & 0x7f
@@ -221,32 +252,11 @@ func sendBlock(hdr []byte, tbase time.Duration, ch chan<- Packet) {
 		p.Data = hdr[4:]
 		ch <- p
 	case 1:
-		laces := int(hdr[4])
-		szs := make([]int, laces)
-		curr := 5
-		for i := 0; i < laces; i++ {
-			for hdr[curr] == 255 {
-				szs[i] += 255
-				curr++
-			}
-			szs[i] += int(uint(hdr[curr]))
-			curr++
-		}
-		sendLaces(&p, hdr[curr:], szs, tbase, ch)
+		sz, curr := parseXiphSizes(hdr)
+		sendLaces(&p, hdr[curr:], sz, tbase, ch)
 	case 3:
-		var rem int
-		laces := int(hdr[4])
-		szs := make([]int, laces)
-		curr := 5
-		szs[0], rem = laceSize(hdr[curr:])
-		for i := 1; i < laces; i++ {
-			curr += rem + 1
-			var dsz int
-			dsz, rem = laceDelta(hdr[curr:])
-			szs[i] = szs[i-1] + dsz
-		}
-		curr += rem + 1
-		sendLaces(&p, hdr[curr:], szs, tbase, ch)
+		sz, curr := parseEBMLSizes(hdr)
+		sendLaces(&p, hdr[curr:], sz, tbase, ch)
 	default:
 		log.Panic("Lacing unimplemented: ", lacing)
 	}
