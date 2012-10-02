@@ -191,6 +191,19 @@ func laceDelta(v []byte) (val int, rem int) {
 	return
 }
 
+func sendLaces(p *Packet, d []byte, sz []int, tbase time.Duration, ch chan<- Packet) {
+	var curr int
+	for i, l := 0, len(sz); i < l; i++ {
+		if sz[i] != 0 {
+			p.Data = d[curr : curr+sz[i]]
+			ch <- *p
+			curr += sz[i]
+		}
+	}
+	p.Data = d[curr:]
+	ch <- *p
+}
+
 func sendBlock(hdr []byte, tbase time.Duration, ch chan<- Packet) {
 	var p Packet
 	p.TrackNumber = uint(hdr[0]) & 0x7f
@@ -207,10 +220,23 @@ func sendBlock(hdr []byte, tbase time.Duration, ch chan<- Packet) {
 	case 0:
 		p.Data = hdr[4:]
 		ch <- p
+	case 1:
+		laces := int(hdr[4])
+		szs := make([]int, laces)
+		curr := 5
+		for i := 0; i < laces; i++ {
+			for hdr[curr] == 255 {
+				szs[i] += 255
+				curr++
+			}
+			szs[i] += int(uint(hdr[curr]))
+			curr++
+		}
+		sendLaces(&p, hdr[curr:], szs, tbase, ch)
 	case 3:
 		var rem int
 		laces := int(hdr[4])
-		szs := make([]int, laces+1)
+		szs := make([]int, laces)
 		curr := 5
 		szs[0], rem = laceSize(hdr[curr:])
 		for i := 1; i < laces; i++ {
@@ -220,13 +246,7 @@ func sendBlock(hdr []byte, tbase time.Duration, ch chan<- Packet) {
 			szs[i] = szs[i-1] + dsz
 		}
 		curr += rem + 1
-		for i := 0; i < laces; i++ {
-			p.Data = hdr[curr : curr+szs[i]]
-			ch <- p
-			curr += szs[i]
-		}
-		p.Data = hdr[curr:]
-		ch <- p
+		sendLaces(&p, hdr[curr:], szs, tbase, ch)
 	default:
 		log.Panic("Lacing unimplemented: ", lacing)
 	}
