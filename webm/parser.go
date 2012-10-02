@@ -166,10 +166,30 @@ type CueTrackPositions struct {
 	CueBlockNumber     uint `ebml:"5378" ebmldef:"1"`
 }
 
+func sendBlock(hdr []byte, tbase time.Duration, ch chan<- Packet) {
+	var p Packet
+	lacing := (hdr[3] >> 1) & 3
+	switch lacing {
+	case 0:
+		p.Data = hdr[4:]
+		p.TrackNumber = uint(hdr[0]) & 0x7f
+		p.Timecode = tbase + time.Millisecond*time.Duration(
+			uint(hdr[1])<<8+uint(hdr[2]))
+		p.Invisible = (hdr[3] & 8) != 0
+		p.Keyframe = (hdr[3] & 0x80) != 0
+		p.Discardable = (hdr[3] & 1) != 0
+		if p.Discardable {
+			log.Println("Discardable packet")
+		}
+		ch <- p
+	default:
+		log.Panic("Lacing unimplemented: ", lacing)
+	}
+}
+
 func sendPackets(e *ebml.Element, rest *ebml.Element,
 	tbase time.Duration, ch chan<- Packet) {
 	var err error
-	var p Packet
 	curr := 0
 	for err == nil {
 		var hdr []byte
@@ -178,21 +198,7 @@ func sendPackets(e *ebml.Element, rest *ebml.Element,
 			log.Println(err)
 		}
 		if err == nil && e.Id == 163 && len(hdr) > 4 {
-			p.Data = hdr[4:]
-			p.TrackNumber = uint(hdr[0]) & 0x7f
-			p.Timecode = tbase + time.Millisecond*time.Duration(
-				uint(hdr[1])<<8+uint(hdr[2]))
-			p.Invisible = (hdr[3] & 8) != 0
-			p.Keyframe = (hdr[3] & 0x80) != 0
-			p.Discardable = (hdr[3] & 1) != 0
-			if p.Discardable {
-				log.Println("Discardable packet")
-			}
-			lacing := (hdr[3] >> 1) & 3
-			if 0 != lacing {
-				log.Panic("Lacing unimplemented: ", lacing)
-			}
-			ch <- p
+			sendBlock(hdr, tbase, ch)
 		} else {
 			log.Println("Unexpected packet")
 		}
