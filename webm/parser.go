@@ -166,21 +166,66 @@ type CueTrackPositions struct {
 	CueBlockNumber     uint `ebml:"5378" ebmldef:"1"`
 }
 
+func remaining(x int8) (rem int) {
+	for x > 0 {
+		rem++
+		x += x
+	}
+	return
+}
+
+func laceSize(v []byte) (val int, rem int) {
+	val = int(v[0])
+	rem = remaining(int8(val))
+	for i, l := 1, rem+1; i < l; i++ {
+		val <<= 8
+		val += int(v[i])
+	}
+	val &= ^(128 << uint(rem*8-rem))
+	return
+}
+
+func laceDelta(v []byte) (val int, rem int) {
+	val, rem = laceSize(v)
+	val -= (1 << (uint(7*(rem+1) - 1))) - 1
+	return
+}
+
 func sendBlock(hdr []byte, tbase time.Duration, ch chan<- Packet) {
 	var p Packet
+	p.TrackNumber = uint(hdr[0]) & 0x7f
+	p.Timecode = tbase + time.Millisecond*time.Duration(
+		uint(hdr[1])<<8+uint(hdr[2]))
+	p.Invisible = (hdr[3] & 8) != 0
+	p.Keyframe = (hdr[3] & 0x80) != 0
+	p.Discardable = (hdr[3] & 1) != 0
+	if p.Discardable {
+		log.Println("Discardable packet")
+	}
 	lacing := (hdr[3] >> 1) & 3
 	switch lacing {
 	case 0:
 		p.Data = hdr[4:]
-		p.TrackNumber = uint(hdr[0]) & 0x7f
-		p.Timecode = tbase + time.Millisecond*time.Duration(
-			uint(hdr[1])<<8+uint(hdr[2]))
-		p.Invisible = (hdr[3] & 8) != 0
-		p.Keyframe = (hdr[3] & 0x80) != 0
-		p.Discardable = (hdr[3] & 1) != 0
-		if p.Discardable {
-			log.Println("Discardable packet")
+		ch <- p
+	case 3:
+		var rem int
+		laces := int(hdr[4])
+		szs := make([]int, laces+1)
+		curr := 5
+		szs[0], rem = laceSize(hdr[curr:])
+		for i := 1; i < laces; i++ {
+			curr += rem + 1
+			var dsz int
+			dsz, rem = laceDelta(hdr[curr:])
+			szs[i] = szs[i-1] + dsz
 		}
+		curr += rem + 1
+		for i := 0; i < laces; i++ {
+			p.Data = hdr[curr : curr+szs[i]]
+			ch <- p
+			curr += szs[i]
+		}
+		p.Data = hdr[curr:]
 		ch <- p
 	default:
 		log.Panic("Lacing unimplemented: ", lacing)
