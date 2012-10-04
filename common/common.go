@@ -3,7 +3,6 @@ package common
 import (
 	"bufio"
 	"code.google.com/p/ebml-go/webm"
-	"code.google.com/p/ffvorbis-go/ffvorbis"
 	"code.google.com/p/ffvp8-go/ffvp8"
 	"flag"
 	"log"
@@ -15,7 +14,7 @@ var (
 )
 
 func Main(vpresent func(ch <-chan *ffvp8.Frame),
-	apresent func(ch <-chan *ffvorbis.Samples, atrack *webm.Audio)) {
+	apresent func(ch <-chan webm.Samples, atrack *webm.Audio)) {
 
 	var err error
 	var wm webm.WebM
