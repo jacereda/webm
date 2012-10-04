@@ -86,11 +86,6 @@ func (t *TrackEntry) IsAudio() bool {
 	return t.TrackType == 2
 }
 
-func (t *TrackEntry) samplesDuration(samples uint64) time.Duration {
-	return time.Duration(int64(float64(time.Second) * float64(samples) /
-		(float64(t.Audio.Channels) * t.Audio.SamplingFrequency)))
-}
-
 type Video struct {
 	FlagInterlaced  uint `ebml:"9A" ebmldef:"0"`
 	StereoMode      uint `ebml:"53B8" ebmldef:"0"`
