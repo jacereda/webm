@@ -38,8 +38,9 @@ func (d *VideoDecoder) Decode(pkt *Packet) {
 		frame := Frame{img, pkt.Timecode}
 		if frame.Timecode == BadTC {
 			frame.Timecode = d.estimate()
+			//			log.Println("bad tc:", frame.Timecode)
 		} else {
-			//			log.Println("good tc:", frame.Timecode - d.estimate(), d.duration)
+			//			log.Println("good tc:", frame.Timecode, frame.Timecode - d.estimate(), d.duration)
 			d.goodtc = frame.Timecode
 			d.emitted = 0
 		}
