@@ -4,7 +4,6 @@ import (
 	"code.google.com/p/ebml-go/common"
 	"code.google.com/p/ebml-go/webm"
 	"code.google.com/p/ffvorbis-go/ffvorbis"
-	"code.google.com/p/ffvp8-go/ffvp8"
 	"code.google.com/p/portaudio-go/portaudio"
 	"flag"
 	gl "github.com/chsc/gogl/gl21"
@@ -153,7 +152,7 @@ func factor(t time.Time, tc0 time.Time, tc1 time.Time) gl.Float {
 	return gl.Float(res)
 }
 
-func vpresent(wchan <-chan *ffvp8.Frame) {
+func vpresent(wchan <-chan webm.Frame) {
 	if *blend {
 		ntex = 6
 	} else {
@@ -209,12 +208,9 @@ func vpresent(wchan <-chan *ffvp8.Frame) {
 		if *notc || t.After(tbase.Add(img.Timecode)) {
 			var ok bool
 			pimg = img
-			img = nil
-			for img == nil {
-				img, ok = <-wchan
-				if !ok {
-					return
-				}
+			img, ok = <-wchan
+			if !ok {
+				return
 			}
 			if img.Timecode == pimg.Timecode {
 				log.Println("same timecode", img.Timecode)

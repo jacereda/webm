@@ -2,7 +2,6 @@ package webm
 
 import (
 	"code.google.com/p/ffvorbis-go/ffvorbis"
-	"code.google.com/p/ffvp8-go/ffvp8"
 )
 
 type Stream struct {
@@ -22,7 +21,7 @@ func NewStream(track *TrackEntry) *Stream {
 	return &s
 }
 
-func (s *Stream) VideoChannel() <-chan *ffvp8.Frame {
+func (s *Stream) VideoChannel() <-chan Frame {
 	return s.Decoder.(*VideoDecoder).Chan
 }
 
