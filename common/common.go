@@ -56,11 +56,11 @@ func Main(vpresent func(ch <-chan *ffvp8.Frame),
 	splitter.Split()
 	switch {
 	case astream != nil && vstream != nil:
-		go apresent(astream.Decoder.(*webm.AudioDecoder).Chan, &atrack.Audio)
-		vpresent(vstream.Decoder.(*webm.VideoDecoder).Chan)
+		go apresent(astream.AudioChannel(), &atrack.Audio)
+		vpresent(vstream.VideoChannel())
 	case vstream != nil:
-		vpresent(vstream.Decoder.(*webm.VideoDecoder).Chan)
+		vpresent(vstream.VideoChannel())
 	case astream != nil:
-		apresent(astream.Decoder.(*webm.AudioDecoder).Chan, &atrack.Audio)
+		apresent(astream.AudioChannel(), &atrack.Audio)
 	}
 }
