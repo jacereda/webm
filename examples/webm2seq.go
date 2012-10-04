@@ -3,7 +3,7 @@ package main
 import (
 	"bufio"
 	"code.google.com/p/ebml-go/common"
-	"code.google.com/p/ffvp8-go/ffvp8"
+	"code.google.com/p/ebml-go/webm"
 	"flag"
 	"fmt"
 	"image"
@@ -58,7 +58,7 @@ func encoder(ch <-chan encjob, ech chan<- int) {
 	close(ech)
 }
 
-func write(ch <-chan *ffvp8.Frame) {
+func write(ch <-chan webm.Frame) {
 	i := 0
 	for frame := range ch {
 		if *out != "" {
