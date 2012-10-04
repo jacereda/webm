@@ -30,37 +30,37 @@ func Main(vpresent func(ch <-chan *ffvp8.Frame),
 	var streams []*webm.Stream
 
 	var vtrack *webm.TrackEntry
-	var vstream *webm.VideoStream
+	var vstream *webm.Stream
 	if vpresent != nil {
 		vtrack = wm.FindFirstVideoTrack()
 	}
 	if vtrack != nil {
-		vstream = webm.NewVideoStream(vtrack)
+		vstream = webm.NewStream(vtrack)
 	}
 	if vstream != nil {
-		streams = append(streams, &vstream.Stream)
+		streams = append(streams, vstream)
 	}
 
-	var astream *webm.AudioStream
+	var astream *webm.Stream
 	var atrack *webm.TrackEntry
 	if apresent != nil {
 		atrack = wm.FindFirstAudioTrack()
 	}
 	if atrack != nil {
-		astream = webm.NewAudioStream(atrack)
+		astream = webm.NewStream(atrack)
 	}
 	if astream != nil {
-		streams = append(streams, &astream.Stream)
+		streams = append(streams, astream)
 	}
 
 	webm.Split(pchan, streams)
 	switch {
 	case astream != nil && vstream != nil:
-		go apresent(astream.Decode(), &atrack.Audio)
-		vpresent(vstream.Decode())
+		go apresent(astream.Decoder.(*webm.AudioDecoder).Chan, &atrack.Audio)
+		vpresent(vstream.Decoder.(*webm.VideoDecoder).Chan)
 	case vstream != nil:
-		vpresent(vstream.Decode())
+		vpresent(vstream.Decoder.(*webm.VideoDecoder).Chan)
 	case astream != nil:
-		apresent(astream.Decode(), &atrack.Audio)
+		apresent(astream.Decoder.(*webm.AudioDecoder).Chan, &atrack.Audio)
 	}
 }

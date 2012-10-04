@@ -1,35 +1,37 @@
 package webm
 
+import ()
+
 type Stream struct {
-	Chan  chan Packet
-	Track *TrackEntry
+	Track   *TrackEntry
+	Decoder Decoder
 }
 
-func (s *Stream)init(track *TrackEntry) {
-	s.Chan = make(chan Packet, 4)
+func NewStream(track *TrackEntry) *Stream {
+	var s Stream
 	s.Track = track
+	if track.IsAudio() {
+		s.Decoder = NewAudioDecoder(track)
+	}
+	if track.IsVideo() {
+		s.Decoder = NewVideoDecoder(track)
+	}
+	return &s
 }
 
 func split(pchan <-chan Packet, streams []*Stream) {
 	for pkt := range pchan {
 		for _, s := range streams {
 			if pkt.TrackNumber == s.Track.TrackNumber {
-				s.Chan <- pkt
+				s.Decoder.Decode(&pkt)
 			}
 		}
 	}
 	for _, s := range streams {
-		close(s.Chan)
+		s.Decoder.Close()
 	}
 }
 
 func Split(pchan <-chan Packet, streams []*Stream) {
-	var fstreams []*Stream
-	// XXX Isn't there a filter()?
-	for _, s := range streams {
-		if s != nil {
-			fstreams = append(fstreams, s)
-		}
-	}
-	go split(pchan, fstreams)
+	go split(pchan, streams)
 }

@@ -3,36 +3,43 @@ package webm
 import (
 	"code.google.com/p/ffvorbis-go/ffvorbis"
 	"log"
+	"time"
 )
 
-type AudioStream struct {
-	Stream
+type AudioDecoder struct {
+	Chan     chan *ffvorbis.Samples
+	dec      *ffvorbis.Decoder
+	lasttc   time.Duration
+	duration time.Duration
+	emitted  int
 }
 
-func NewAudioStream(track *TrackEntry) *AudioStream {
-	var s AudioStream
-	s.Stream.init(track)
-	return &s
+func NewAudioDecoder(track *TrackEntry) *AudioDecoder {
+	var d AudioDecoder
+	d.Chan = make(chan *ffvorbis.Samples, 4)
+	d.dec = ffvorbis.NewDecoder(track.CodecPrivate)
+	d.duration = track.samplesDuration(1)
+	return &d
 }
 
-func adecode(dec *ffvorbis.Decoder,
-	in <-chan Packet, out chan<- *ffvorbis.Samples) {
-	for pkt := range in {
-		buf := dec.Decode(pkt.Data, pkt.Timecode)
-		if buf != nil {
-			if !pkt.Invisible {
-				out <- buf
-			} else {
-				log.Println("Invisible audio packet")
-			}
+func (d *AudioDecoder) Decode(pkt *Packet) {
+	smp := d.dec.Decode(pkt.Data, pkt.Timecode)
+	if smp != nil {
+		if smp.Timecode == BadTC {
+			smp.Timecode = d.lasttc + time.Duration(d.emitted)*d.duration
+			d.emitted += len(smp.Data) / 4
+		} else {
+			d.lasttc = smp.Timecode
+			d.emitted = 0
+		}
+		if !pkt.Invisible {
+			d.Chan <- smp
+		} else {
+			log.Println("Invisible audio packet")
 		}
 	}
-	close(out)
 }
 
-func (s *AudioStream) Decode() <-chan *ffvorbis.Samples {
-	out := make(chan *ffvorbis.Samples, 4)
-	dec := ffvorbis.NewDecoder(s.Track.CodecPrivate)
-	go adecode(dec, s.Chan, out)
-	return out
+func (d *AudioDecoder) Close() {
+	close(d.Chan)
 }

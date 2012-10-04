@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+const BadTC = time.Duration(-1000000000000000)
+
 type WebM struct {
 	Header  `ebml:"1a45dfa3"`
 	Segment `ebml:"18538067"`
@@ -82,6 +84,11 @@ func (t *TrackEntry) IsVideo() bool {
 
 func (t *TrackEntry) IsAudio() bool {
 	return t.TrackType == 2
+}
+
+func (t *TrackEntry) samplesDuration(samples uint64) time.Duration {
+	return time.Duration(int64(float64(time.Second) * float64(samples) /
+		(float64(t.Audio.Channels) * t.Audio.SamplingFrequency)))
 }
 
 type Video struct {
@@ -191,13 +198,14 @@ func laceDelta(v []byte) (val int, rem int) {
 	return
 }
 
-func sendLaces(p *Packet, d []byte, sz []int, tbase time.Duration, ch chan<- Packet) {
+func sendLaces(p *Packet, d []byte, sz []int, ch chan<- Packet) {
 	var curr int
 	for i, l := 0, len(sz); i < l; i++ {
 		if sz[i] != 0 {
 			p.Data = d[curr : curr+sz[i]]
 			ch <- *p
 			curr += sz[i]
+			p.Timecode = BadTC
 		}
 	}
 	p.Data = d[curr:]
@@ -253,10 +261,10 @@ func sendBlock(hdr []byte, tbase time.Duration, ch chan<- Packet) {
 		ch <- p
 	case 1:
 		sz, curr := parseXiphSizes(hdr)
-		sendLaces(&p, hdr[curr:], sz, tbase, ch)
+		sendLaces(&p, hdr[curr:], sz, ch)
 	case 3:
 		sz, curr := parseEBMLSizes(hdr)
-		sendLaces(&p, hdr[curr:], sz, tbase, ch)
+		sendLaces(&p, hdr[curr:], sz, ch)
 	default:
 		log.Panic("Lacing unimplemented: ", lacing)
 	}

@@ -9,6 +9,7 @@ import (
 	"flag"
 	gl "github.com/chsc/gogl/gl21"
 	"github.com/jteeuwen/glfw"
+	"log"
 	"math"
 	"runtime"
 	"time"
@@ -215,6 +216,9 @@ func vpresent(wchan <-chan *ffvp8.Frame) {
 					return
 				}
 			}
+			if img.Timecode == pimg.Timecode {
+				log.Println("same timecode", img.Timecode)
+			}
 		}
 		gl.ActiveTexture(gl.TEXTURE0)
 		upload(1, img.Y, img.YStride, w, h)
@@ -255,6 +259,8 @@ func (aw *AudioWriter) ProcessAudio(in, out []float32) {
 				return
 			}
 			aw.sofar = 0
+			//			log.Println("timecode", aw.curr.Timecode)
+
 		}
 		s := copy(out[sent:], aw.curr.Data[aw.sofar:])
 		sent += s
