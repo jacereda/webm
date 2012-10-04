@@ -1,7 +1,6 @@
 package webm
 
 import (
-	"code.google.com/p/ffvorbis-go/ffvorbis"
 	"code.google.com/p/ffvp8-go/ffvp8"
 )
 
@@ -26,6 +25,6 @@ func (s *Stream) VideoChannel() <-chan *ffvp8.Frame {
 	return s.Decoder.(*VideoDecoder).Chan
 }
 
-func (s *Stream) AudioChannel() <-chan *ffvorbis.Samples {
+func (s *Stream) AudioChannel() <-chan Samples {
 	return s.Decoder.(*AudioDecoder).Chan
 }

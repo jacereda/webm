@@ -3,7 +3,6 @@ package main
 import (
 	"code.google.com/p/ebml-go/common"
 	"code.google.com/p/ebml-go/webm"
-	"code.google.com/p/ffvorbis-go/ffvorbis"
 	"code.google.com/p/ffvp8-go/ffvp8"
 	"code.google.com/p/portaudio-go/portaudio"
 	"flag"
@@ -244,23 +243,19 @@ func vpresent(wchan <-chan *ffvp8.Frame) {
 }
 
 type AudioWriter struct {
-	ch       <-chan *ffvorbis.Samples
-	active   bool
-	curr     *ffvorbis.Samples
+	ch       <-chan webm.Samples
 	channels int
+	active   bool
 	sofar    int
+	curr     webm.Samples
 }
 
 func (aw *AudioWriter) ProcessAudio(in, out []float32) {
 	for sent, lo := 0, len(out); sent < lo; {
-		if aw.curr == nil || aw.sofar == len(aw.curr.Data) {
+		if aw.sofar == len(aw.curr.Data) {
 			aw.curr, aw.active = <-aw.ch
-			if aw.curr == nil {
-				return
-			}
 			aw.sofar = 0
 			//			log.Println("timecode", aw.curr.Timecode)
-
 		}
 		s := copy(out[sent:], aw.curr.Data[aw.sofar:])
 		sent += s
@@ -268,14 +263,14 @@ func (aw *AudioWriter) ProcessAudio(in, out []float32) {
 	}
 }
 
-func apresent(wchan <-chan *ffvorbis.Samples, audio *webm.Audio) {
+func apresent(wchan <-chan webm.Samples, audio *webm.Audio) {
 	chk := func(err error) {
 		if err != nil {
 			panic(err)
 		}
 	}
 	channels := int(audio.Channels)
-	aw := AudioWriter{wchan, true, nil, channels, 0}
+	aw := AudioWriter{ch: wchan, channels: channels, active: true}
 	stream, err := portaudio.OpenDefaultStream(0, channels,
 		audio.SamplingFrequency, 0, &aw)
 	defer stream.Close()
