@@ -27,7 +27,7 @@ func Main(vpresent func(ch <-chan *ffvp8.Frame),
 	br := bufio.NewReader(r)
 	pchan := webm.Parse(br, &wm)
 
-	var streams []*webm.Stream
+	splitter := webm.NewSplitter(pchan)
 
 	var vtrack *webm.TrackEntry
 	var vstream *webm.Stream
@@ -38,7 +38,7 @@ func Main(vpresent func(ch <-chan *ffvp8.Frame),
 		vstream = webm.NewStream(vtrack)
 	}
 	if vstream != nil {
-		streams = append(streams, vstream)
+		splitter.AddStream(vstream)
 	}
 
 	var astream *webm.Stream
@@ -50,10 +50,10 @@ func Main(vpresent func(ch <-chan *ffvp8.Frame),
 		astream = webm.NewStream(atrack)
 	}
 	if astream != nil {
-		streams = append(streams, astream)
+		splitter.AddStream(astream)
 	}
 
-	webm.Split(pchan, streams)
+	splitter.Split()
 	switch {
 	case astream != nil && vstream != nil:
 		go apresent(astream.Decoder.(*webm.AudioDecoder).Chan, &atrack.Audio)
