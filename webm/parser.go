@@ -222,6 +222,17 @@ func parseXiphSizes(d []byte) (sz []int, curr int) {
 	return
 }
 
+func parseFixedSizes(d []byte) (sz []int, curr int) {
+	laces := int(uint(d[4]))
+	curr = 5
+	fsz := len(d[curr:]) / (laces + 1)
+	sz = make([]int, laces)
+	for i := 0; i < laces; i++ {
+		sz[i] = fsz
+	}
+	return
+}
+
 func parseEBMLSizes(d []byte) (sz []int, curr int) {
 	laces := int(uint(d[4]))
 	sz = make([]int, laces)
@@ -257,11 +268,12 @@ func sendBlock(hdr []byte, tbase time.Duration, ch chan<- Packet) {
 	case 1:
 		sz, curr := parseXiphSizes(hdr)
 		sendLaces(&p, hdr[curr:], sz, ch)
+	case 2:
+		sz, curr := parseFixedSizes(hdr)
+		sendLaces(&p, hdr[curr:], sz, ch)
 	case 3:
 		sz, curr := parseEBMLSizes(hdr)
 		sendLaces(&p, hdr[curr:], sz, ch)
-	default:
-		log.Panic("Lacing unimplemented: ", lacing)
 	}
 }
 
