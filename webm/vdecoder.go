@@ -17,15 +17,19 @@ type VideoDecoder struct {
 	dec      *ffvp8.Decoder
 	duration time.Duration
 	emitted  uint
-	lasttc   time.Duration
+	goodtc   time.Duration
 }
 
 func NewVideoDecoder(track *TrackEntry) *VideoDecoder {
-	var d VideoDecoder
-	d.Chan = make(chan Frame, 4)
-	d.dec = ffvp8.NewDecoder()
-	d.duration = time.Duration(track.DefaultDuration)
-	return &d
+	return &VideoDecoder{
+		Chan:     make(chan Frame, 4),
+		dec:      ffvp8.NewDecoder(),
+		duration: time.Duration(track.DefaultDuration),
+	}
+}
+
+func (d *VideoDecoder) estimate() time.Duration {
+	return d.goodtc + time.Duration(d.emitted)*d.duration
 }
 
 func (d *VideoDecoder) Decode(pkt *Packet) {
@@ -33,12 +37,13 @@ func (d *VideoDecoder) Decode(pkt *Packet) {
 	if img != nil {
 		frame := Frame{img, pkt.Timecode}
 		if frame.Timecode == BadTC {
-			d.emitted++
-			frame.Timecode = d.lasttc + time.Duration(d.emitted)*d.duration
+			frame.Timecode = d.estimate()
 		} else {
-			d.lasttc = frame.Timecode
+			//			log.Println("good tc:", frame.Timecode - d.estimate(), d.duration)
+			d.goodtc = frame.Timecode
 			d.emitted = 0
 		}
+		d.emitted++
 		if !pkt.Invisible {
 			d.Chan <- frame
 		} else {
