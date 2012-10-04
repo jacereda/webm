@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+type Samples struct {
+	Data     []float32
+	Timecode time.Duration
+}
+
 type AudioDecoder struct {
 	Chan     chan Samples
 	dec      *ffvorbis.Decoder
@@ -14,17 +19,14 @@ type AudioDecoder struct {
 	emitted  int
 }
 
-type Samples struct {
-	Data     []float32
-	Timecode time.Duration
-}
-
 func NewAudioDecoder(track *TrackEntry) *AudioDecoder {
-	var d AudioDecoder
-	d.Chan = make(chan Samples, 4)
-	d.dec = ffvorbis.NewDecoder(track.CodecPrivate)
-	d.duration = track.samplesDuration(1)
-	return &d
+	return &AudioDecoder{
+		Chan: make(chan Samples, 4),
+		dec: ffvorbis.NewDecoder(track.CodecPrivate,
+			int(track.Audio.SamplingFrequency),
+			int(track.Audio.Channels)),
+		duration: track.samplesDuration(1),
+	}
 }
 
 func (d *AudioDecoder) Decode(pkt *Packet) {
