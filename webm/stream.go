@@ -1,9 +1,5 @@
 package webm
 
-import (
-	"code.google.com/p/ffvorbis-go/ffvorbis"
-)
-
 type Stream struct {
 	Track   *TrackEntry
 	Decoder Decoder
@@ -25,6 +21,6 @@ func (s *Stream) VideoChannel() <-chan Frame {
 	return s.Decoder.(*VideoDecoder).Chan
 }
 
-func (s *Stream) AudioChannel() <-chan *ffvorbis.Samples {
+func (s *Stream) AudioChannel() <-chan Samples {
 	return s.Decoder.(*AudioDecoder).Chan
 }
