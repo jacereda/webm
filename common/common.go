@@ -12,8 +12,8 @@ var (
 	In = flag.String("i", "", "Input file")
 )
 
-func Main(vpresent func(ch <-chan webm.Frame),
-	apresent func(ch <-chan webm.Samples, atrack *webm.Audio)) {
+func Main(vpresent func(<-chan webm.Frame, *webm.Reader),
+	apresent func(<-chan webm.Samples, *webm.Audio)) {
 	var err error
 	var wm webm.WebM
 	r, err := os.Open(*In)
@@ -23,6 +23,7 @@ func Main(vpresent func(ch <-chan webm.Frame),
 	}
 	br := bufio.NewReader(r)
 	reader, err := webm.Parse(br, &wm)
+	reader.Resume()
 	if err != nil {
 		log.Panic("Unable to parse file:", err)
 	}
@@ -56,9 +57,9 @@ func Main(vpresent func(ch <-chan webm.Frame),
 	switch {
 	case astream != nil && vstream != nil:
 		go apresent(astream.AudioChannel(), &atrack.Audio)
-		vpresent(vstream.VideoChannel())
+		vpresent(vstream.VideoChannel(), reader)
 	case vstream != nil:
-		vpresent(vstream.VideoChannel())
+		vpresent(vstream.VideoChannel(), reader)
 	case astream != nil:
 		apresent(astream.AudioChannel(), &atrack.Audio)
 	}

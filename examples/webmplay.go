@@ -152,7 +152,22 @@ func factor(t time.Time, tc0 time.Time, tc1 time.Time) gl.Float {
 	return gl.Float(res)
 }
 
-func vpresent(wchan <-chan webm.Frame) {
+var steps = uint(0xffffffff)
+
+func khandler(key, state int) {
+	if state == glfw.KeyRelease {
+		switch key {
+		case 'P':
+			steps = 0
+		case 'R':
+			steps = 0xffffffff
+		case 'S':
+			steps = 1
+		}
+	}
+}
+
+func vpresent(wchan <-chan webm.Frame, reader *webm.Reader) {
 	if *blend {
 		ntex = 6
 	} else {
@@ -173,6 +188,7 @@ func vpresent(wchan <-chan webm.Frame) {
 		wh = 900
 	}
 	glfw.OpenWindow(ww, wh, 0, 0, 0, 0, 0, 0, mode)
+	glfw.SetKeyCallback(khandler)
 	defer glfw.CloseWindow()
 	glfw.SetWindowSizeCallback(func(ww, wh int) {
 		oaspect := float64(w) / float64(h)
@@ -205,9 +221,9 @@ func vpresent(wchan <-chan webm.Frame) {
 	for glfw.WindowParam(glfw.Opened) == 1 {
 		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 		t := time.Now()
-		if *notc || t.After(tbase.Add(img.Timecode)) {
-			var ok bool
+		if steps > 0 && (*notc || t.After(tbase.Add(img.Timecode))) {
 			pimg = img
+			var ok bool
 			img, ok = <-wchan
 			if !ok {
 				return
@@ -215,6 +231,7 @@ func vpresent(wchan <-chan webm.Frame) {
 			if img.Timecode == pimg.Timecode {
 				log.Println("same timecode", img.Timecode)
 			}
+			steps--
 		}
 		gl.ActiveTexture(gl.TEXTURE0)
 		upload(1, img.Y, img.YStride, w, h)

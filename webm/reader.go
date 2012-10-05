@@ -17,20 +17,21 @@ type Packet struct {
 	Discardable bool
 }
 
-type Command int
-
 const (
-	cmdPause = iota
-	cmdResume
-	cmdStep
+	cmdNone   = 0
+	cmdPause  = 1
+	cmdResume = 2
+	cmdStep   = 3
 )
 
 type Reader struct {
-	Chan chan Packet
-	ctl  chan Command
+	Chan  chan Packet
+	seek  chan time.Duration
+	steps uint
 }
 
 func (r *Reader) send(p *Packet) {
+	r.handleCommands()
 	r.Chan <- *p
 }
 
@@ -179,15 +180,12 @@ func (r *Reader) parseClusters(e *ebml.Element, rest *ebml.Element) {
 
 func newReader(e, rest *ebml.Element) *Reader {
 	r := &Reader{make(chan Packet, 2),
-		make(chan Command, 0)}
+		make(chan int, 0),
+		0}
 	go r.parseClusters(e, rest)
 	return r
 }
 
-func (r *Reader) Pause() {
-	r.ctl <- cmdPause
-}
-
-func (r *Reader) Resume() {
-	r.ctl <- cmdResume
+func (r *Reader) Seek(t time.Duration) {
+	r.seek <- t
 }
