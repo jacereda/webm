@@ -313,18 +313,21 @@ func parseClusters(e *ebml.Element, rest *ebml.Element, ch chan<- Packet) {
 	close(ch)
 }
 
-func Parse(r io.Reader, m *WebM) <-chan Packet {
-	ch := make(chan Packet, 2)
-	e, err := ebml.RootElement(r)
+func Parse(r io.Reader, m *WebM) (ch <-chan Packet, err error) {
+	var e *ebml.Element
+	e, err = ebml.RootElement(r)
 	if err == nil {
 		err = e.Unmarshal(m)
 		if err != nil && err.Error() == "Reached payload" {
+			bch := make(chan Packet, 2)
 			go parseClusters(err.(ebml.ReachedPayloadError).First,
 				err.(ebml.ReachedPayloadError).Rest,
-				ch)
+				bch)
+			ch = bch
+			err = nil
 		}
 	}
-	return ch
+	return
 }
 
 type Packet struct {
