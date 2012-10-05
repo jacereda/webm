@@ -22,11 +22,11 @@ func Main(vpresent func(ch <-chan webm.Frame),
 		log.Panic("Unable to open file " + *In)
 	}
 	br := bufio.NewReader(r)
-	pchan, err := webm.Parse(br, &wm)
+	reader, err := webm.Parse(br, &wm)
 	if err != nil {
 		log.Panic("Unable to parse file:", err)
 	}
-	splitter := webm.NewSplitter(pchan)
+	splitter := webm.NewSplitter(reader.Chan)
 
 	var vtrack *webm.TrackEntry
 	var vstream *webm.Stream
