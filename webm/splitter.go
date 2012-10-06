@@ -13,7 +13,7 @@ func NewSplitter(ch <-chan Packet) *Splitter {
 	return &s
 }
 
-func (s *Splitter) AddStream(stream *Stream) {
+func (s *Splitter) addStream(stream *Stream) {
 	s.streams[stream.Track.TrackNumber] = stream
 }
 
@@ -31,6 +31,11 @@ func (s *Splitter) split() {
 	}
 }
 
-func (s *Splitter) Split() {
+func (s *Splitter) Split(strms ...*Stream) {
+	for _, strm := range strms {
+		if strm != nil {
+			s.addStream(strm)
+		}
+	}
 	go s.split()
 }
