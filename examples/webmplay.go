@@ -270,7 +270,7 @@ func (aw *AudioWriter) ProcessAudio(in, out []float32) {
 		if aw.sofar == len(aw.curr.Data) {
 			aw.curr, aw.active = <-aw.ch
 			aw.sofar = 0
-			//			log.Println("timecode", aw.curr.Timecode)
+			//log.Println("timecode", aw.curr.Timecode)
 		}
 		s := copy(out[sent:], aw.curr.Data[aw.sofar:])
 		sent += s
@@ -321,10 +321,6 @@ func main() {
 	if vtrack != nil {
 		vstream = webm.NewStream(vtrack)
 	}
-	if vstream != nil {
-		splitter.AddStream(vstream)
-	}
-
 	var astream *webm.Stream
 	var atrack *webm.TrackEntry
 	if !*justvideo {
@@ -333,11 +329,7 @@ func main() {
 	if atrack != nil {
 		astream = webm.NewStream(atrack)
 	}
-	if astream != nil {
-		splitter.AddStream(astream)
-	}
-
-	splitter.Split()
+	splitter.Split(astream, vstream)
 	switch {
 	case astream != nil && vstream != nil:
 		go apresent(astream.AudioChannel(), &atrack.Audio)

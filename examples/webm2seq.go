@@ -98,7 +98,6 @@ func main() {
 	vtrack := wm.FindFirstVideoTrack()
 	vstream := webm.NewStream(vtrack)
 	splitter := webm.NewSplitter(reader.Chan)
-	splitter.AddStream(vstream)
-	splitter.Split()
+	splitter.Split(vstream)
 	write(vstream.VideoChannel())
 }
