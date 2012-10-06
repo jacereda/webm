@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"code.google.com/p/ebml-go/common"
 	"code.google.com/p/ebml-go/webm"
 	"flag"
 	"fmt"
@@ -21,6 +20,7 @@ type encjob struct {
 }
 
 var (
+	in       = flag.String("i", "", "Input file")
 	out      = flag.String("o", "", "Output prefix")
 	format   = flag.String("f", "png", "Output format")
 	encoders = flag.Int("j", 4, "Number of parallel encoders")
@@ -85,6 +85,20 @@ func main() {
 		endchans = append(endchans, ech)
 		go encoder(ch, ech)
 	}
-	common.Main(write, nil)
-
+	r, err := os.Open(*in)
+	defer r.Close()
+	if err != nil {
+		log.Panic("Unable to open file " + *in)
+	}
+	var wm webm.WebM
+	reader, err := webm.Parse(r, &wm)
+	if err != nil {
+		log.Panic("Unable to parse file:", err)
+	}
+	vtrack := wm.FindFirstVideoTrack()
+	vstream := webm.NewStream(vtrack)
+	splitter := webm.NewSplitter(reader.Chan)
+	splitter.AddStream(vstream)
+	splitter.Split()
+	write(vstream.VideoChannel())
 }

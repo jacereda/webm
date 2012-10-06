@@ -25,13 +25,11 @@ const (
 )
 
 type Reader struct {
-	Chan  chan Packet
-	seek  chan time.Duration
-	steps uint
+	Chan chan Packet
+	seek chan time.Duration
 }
 
 func (r *Reader) send(p *Packet) {
-	r.handleCommands()
 	r.Chan <- *p
 }
 
@@ -116,31 +114,31 @@ func parseEBMLSizes(d []byte) (sz []int, curr int) {
 	return
 }
 
-func (r *Reader) sendBlock(hdr []byte, tbase time.Duration) {
+func (r *Reader) sendBlock(data []byte, tbase time.Duration) {
 	var p Packet
-	p.TrackNumber = uint(hdr[0]) & 0x7f
+	p.TrackNumber = uint(data[0]) & 0x7f
 	p.Timecode = tbase + time.Millisecond*time.Duration(
-		uint(hdr[1])<<8+uint(hdr[2]))
-	p.Invisible = (hdr[3] & 8) != 0
-	p.Keyframe = (hdr[3] & 0x80) != 0
-	p.Discardable = (hdr[3] & 1) != 0
+		uint(data[1])<<8+uint(data[2]))
+	p.Invisible = (data[3] & 8) != 0
+	p.Keyframe = (data[3] & 0x80) != 0
+	p.Discardable = (data[3] & 1) != 0
 	if p.Discardable {
 		log.Println("Discardable packet")
 	}
-	lacing := (hdr[3] >> 1) & 3
+	lacing := (data[3] >> 1) & 3
 	switch lacing {
 	case 0:
-		p.Data = hdr[4:]
+		p.Data = data[4:]
 		r.send(&p)
 	case 1:
-		sz, curr := parseXiphSizes(hdr)
-		r.sendLaces(&p, hdr[curr:], sz)
+		sz, curr := parseXiphSizes(data)
+		r.sendLaces(&p, data[curr:], sz)
 	case 2:
-		sz, curr := parseFixedSizes(hdr)
-		r.sendLaces(&p, hdr[curr:], sz)
+		sz, curr := parseFixedSizes(data)
+		r.sendLaces(&p, data[curr:], sz)
 	case 3:
-		sz, curr := parseEBMLSizes(hdr)
-		r.sendLaces(&p, hdr[curr:], sz)
+		sz, curr := parseEBMLSizes(data)
+		r.sendLaces(&p, data[curr:], sz)
 	}
 }
 
@@ -148,13 +146,13 @@ func (r *Reader) sendPackets(e *ebml.Element, rest *ebml.Element, tbase time.Dur
 	var err error
 	curr := 0
 	for err == nil {
-		var hdr []byte
-		hdr, err = e.ReadData()
+		var data []byte
+		data, err = e.ReadData()
 		if err != nil {
 			log.Println(err)
 		}
-		if err == nil && e.Id == 163 && len(hdr) > 4 {
-			r.sendBlock(hdr, tbase)
+		if err == nil && e.Id == 163 && len(data) > 4 {
+			r.sendBlock(data, tbase)
 		} else {
 			log.Println("Unexpected packet")
 		}
@@ -179,9 +177,7 @@ func (r *Reader) parseClusters(e *ebml.Element, rest *ebml.Element) {
 }
 
 func newReader(e, rest *ebml.Element) *Reader {
-	r := &Reader{make(chan Packet, 2),
-		make(chan int, 0),
-		0}
+	r := &Reader{make(chan Packet, 2), make(chan time.Duration, 0)}
 	go r.parseClusters(e, rest)
 	return r
 }

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"code.google.com/p/ebml-go/common"
 	"code.google.com/p/ebml-go/webm"
 	"code.google.com/p/portaudio-go/portaudio"
 	"flag"
@@ -9,11 +8,13 @@ import (
 	"github.com/jteeuwen/glfw"
 	"log"
 	"math"
+	"os"
 	"runtime"
 	"time"
 )
 
 var (
+	in         = flag.String("i", "", "Input file")
 	unsync     = flag.Bool("u", false, "Unsynchronized display")
 	notc       = flag.Bool("t", false, "Ignore timecodes")
 	blend      = flag.Bool("b", false, "Blend between images")
@@ -167,7 +168,7 @@ func khandler(key, state int) {
 	}
 }
 
-func vpresent(wchan <-chan webm.Frame, reader *webm.Reader) {
+func vpresent(wchan <-chan webm.Frame) {
 	if *blend {
 		ntex = 6
 	} else {
@@ -209,7 +210,7 @@ func vpresent(wchan <-chan webm.Frame, reader *webm.Reader) {
 	if !*unsync {
 		glfw.SetSwapInterval(1)
 	}
-	glfw.SetWindowTitle(*common.In)
+	glfw.SetWindowTitle(*in)
 	for i := 0; i < ntex; i++ {
 		texinit(i + 1)
 	}
@@ -298,13 +299,52 @@ func apresent(wchan <-chan webm.Samples, audio *webm.Audio) {
 
 func main() {
 	flag.Parse()
-	vp := vpresent
-	ap := apresent
-	if *justaudio {
-		vp = nil
+
+	var err error
+	var wm webm.WebM
+	r, err := os.Open(*in)
+	defer r.Close()
+	if err != nil {
+		log.Panic("Unable to open file " + *in)
 	}
-	if *justvideo {
-		ap = nil
+	reader, err := webm.Parse(r, &wm)
+	if err != nil {
+		log.Panic("Unable to parse file:", err)
 	}
-	common.Main(vp, ap)
+	splitter := webm.NewSplitter(reader.Chan)
+
+	var vtrack *webm.TrackEntry
+	var vstream *webm.Stream
+	if !*justaudio {
+		vtrack = wm.FindFirstVideoTrack()
+	}
+	if vtrack != nil {
+		vstream = webm.NewStream(vtrack)
+	}
+	if vstream != nil {
+		splitter.AddStream(vstream)
+	}
+
+	var astream *webm.Stream
+	var atrack *webm.TrackEntry
+	if !*justvideo {
+		atrack = wm.FindFirstAudioTrack()
+	}
+	if atrack != nil {
+		astream = webm.NewStream(atrack)
+	}
+	if astream != nil {
+		splitter.AddStream(astream)
+	}
+
+	splitter.Split()
+	switch {
+	case astream != nil && vstream != nil:
+		go apresent(astream.AudioChannel(), &atrack.Audio)
+		vpresent(vstream.VideoChannel())
+	case vstream != nil:
+		vpresent(vstream.VideoChannel())
+	case astream != nil:
+		apresent(astream.AudioChannel(), &atrack.Audio)
+	}
 }
