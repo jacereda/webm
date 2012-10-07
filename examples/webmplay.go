@@ -154,6 +154,7 @@ func factor(t time.Time, tc0 time.Time, tc1 time.Time) gl.Float {
 }
 
 var steps = uint(0xffffffff)
+var seek = time.Duration(-1)
 
 func khandler(key, state int) {
 	if state == glfw.KeyRelease {
@@ -164,11 +165,13 @@ func khandler(key, state int) {
 			steps = 0xffffffff
 		case 'S':
 			steps = 1
+		case '0':
+			seek = time.Duration(0)
 		}
 	}
 }
 
-func vpresent(wchan <-chan webm.Frame) {
+func vpresent(wchan <-chan webm.Frame, reader *webm.Reader) {
 	if *blend {
 		ntex = 6
 	} else {
@@ -253,6 +256,9 @@ func vpresent(wchan <-chan webm.Frame) {
 		}
 		gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
 		runtime.GC()
+		if seek >= 0 {
+			reader.Seek(seek)
+		}
 		glfw.SwapBuffers()
 	}
 }
@@ -333,9 +339,9 @@ func main() {
 	switch {
 	case astream != nil && vstream != nil:
 		go apresent(astream.AudioChannel(), &atrack.Audio)
-		vpresent(vstream.VideoChannel())
+		fallthrough
 	case vstream != nil:
-		vpresent(vstream.VideoChannel())
+		vpresent(vstream.VideoChannel(), reader)
 	case astream != nil:
 		apresent(astream.AudioChannel(), &atrack.Audio)
 	}
