@@ -258,6 +258,7 @@ func vpresent(wchan <-chan webm.Frame, reader *webm.Reader) {
 		runtime.GC()
 		if seek >= 0 {
 			reader.Seek(seek)
+			seek = time.Duration(-1)
 		}
 		glfw.SwapBuffers()
 	}
