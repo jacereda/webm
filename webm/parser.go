@@ -5,7 +5,6 @@
 package webm
 
 import (
-	"bufio"
 	"code.google.com/p/ebml-go/ebml"
 	"io"
 )
@@ -167,13 +166,11 @@ type CueTrackPositions struct {
 
 func Parse(r io.Reader, m *WebM) (wr *Reader, err error) {
 	var e *ebml.Element
-	br := bufio.NewReader(r)
-	e, err = ebml.RootElement(br)
+	e, err = ebml.RootElement(r)
 	if err == nil {
 		err = e.Unmarshal(m)
 		if err != nil && err.Error() == "Reached payload" {
-			wr = newReader(err.(ebml.ReachedPayloadError).First,
-				err.(ebml.ReachedPayloadError).Rest)
+			wr = newReader(err.(ebml.ReachedPayloadError).Element)
 			err = nil
 		}
 	}
