@@ -2,6 +2,7 @@ package webm
 
 import (
 	"code.google.com/p/ebml-go/ebml"
+	"io"
 	"log"
 	"time"
 )
@@ -142,43 +143,57 @@ func (r *Reader) sendBlock(data []byte, tbase time.Duration) {
 	}
 }
 
-func (r *Reader) sendPackets(e *ebml.Element, rest *ebml.Element, tbase time.Duration) {
+func (r *Reader) sendCluster(elmts *ebml.Element, tbase time.Duration) {
 	var err error
 	curr := 0
 	for err == nil {
+		var e *ebml.Element
+		e, err = elmts.Next()
 		var data []byte
-		data, err = e.ReadData()
-		if err != nil {
+		if err == nil {
+			data, err = e.ReadData()
+		}
+		if err != nil && err != io.EOF {
 			log.Println(err)
 		}
-		if err == nil && e.Id == 163 && len(data) > 4 {
-			r.sendBlock(data, tbase)
-		} else {
-			log.Println("Unexpected packet")
+		if err == nil {
+			if e.Id == 163 && len(data) > 4 {
+				r.sendBlock(data, tbase)
+			} else {
+				log.Printf("Unexpected packet %x", e.Id)
+			}
 		}
-		e, err = rest.Next()
 		curr++
 	}
 }
 
-func (r *Reader) parseClusters(e *ebml.Element, rest *ebml.Element) {
+func (r *Reader) parseClusters(elmts *ebml.Element) {
 	var err error
-	for err == nil && e != nil {
+	for err == nil {
 		var c Cluster
-		err = e.Unmarshal(&c)
-		if err != nil && err.Error() == "Reached payload" {
-			r.sendPackets(err.(ebml.ReachedPayloadError).First,
-				err.(ebml.ReachedPayloadError).Rest,
-				time.Millisecond*time.Duration(c.Timecode))
+		var e *ebml.Element
+		e, err = elmts.Next()
+		if err == nil {
+			err = e.Unmarshal(&c)
 		}
-		e, err = rest.Next()
+		if err != nil && err.Error() == "Reached payload" {
+			r.sendCluster(err.(ebml.ReachedPayloadError).Element,
+				time.Millisecond*time.Duration(c.Timecode))
+			err = nil
+		}
+		if len(r.seek) != 0 {
+			log.Println("seeking")
+			seek := <-r.seek
+			log.Println("seeking", seek)
+			//e.Seek(0, 0)
+		}
 	}
 	close(r.Chan)
 }
 
-func newReader(e, rest *ebml.Element) *Reader {
+func newReader(e *ebml.Element) *Reader {
 	r := &Reader{make(chan Packet, 2), make(chan time.Duration, 0)}
-	go r.parseClusters(e, rest)
+	go r.parseClusters(e)
 	return r
 }
 
