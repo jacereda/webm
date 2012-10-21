@@ -1,6 +1,7 @@
 package webm
 
 import (
+	"fmt"
 	"github.com/petar/GoLLRB/llrb"
 	"time"
 )
@@ -8,6 +9,10 @@ import (
 type seekEntry struct {
 	t      time.Duration
 	offset int64
+}
+
+func (se seekEntry) String() string {
+	return fmt.Sprintf("{%v %v}", se.t, se.offset)
 }
 
 type seekIndex struct {
