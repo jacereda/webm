@@ -4,6 +4,7 @@ import (
 	"code.google.com/p/ebml-go/ebml"
 	"io"
 	"log"
+	"os"
 	"time"
 )
 
@@ -24,6 +25,11 @@ const (
 	cmdResume = 2
 	cmdStep   = 3
 )
+
+type seekpos struct {
+	pos time.Duration
+	off int64
+}
 
 type Reader struct {
 	Chan chan Packet
@@ -172,27 +178,31 @@ func (r *Reader) parseClusters(elmts *ebml.Element) {
 	for err == nil {
 		var c Cluster
 		var e *ebml.Element
+		log.Println("elmnts", elmts)
 		e, err = elmts.Next()
+		log.Println(e)
 		if err == nil {
 			err = e.Unmarshal(&c)
 		}
 		if err != nil && err.Error() == "Reached payload" {
+			sp := seekpos{time.Duration(c.Timecode), e.Offset}
+			log.Println("sp", sp, e)
 			r.sendCluster(err.(ebml.ReachedPayloadError).Element,
 				time.Millisecond*time.Duration(c.Timecode))
 			err = nil
 		}
 		if len(r.seek) != 0 {
-			log.Println("seeking")
-			seek := <-r.seek
-			log.Println("seeking", seek)
-			//e.Seek(0, 0)
+			//			seek := <-r.seek
+			//			elmts.Seek(4096, os.SEEK_SET)
+			elmts.Seek(0, os.SEEK_CUR)
+			log.Println("selements", elmts)
 		}
 	}
 	close(r.Chan)
 }
 
 func newReader(e *ebml.Element) *Reader {
-	r := &Reader{make(chan Packet, 2), make(chan time.Duration, 0)}
+	r := &Reader{make(chan Packet, 2), make(chan time.Duration, 8)}
 	go r.parseClusters(e)
 	return r
 }
