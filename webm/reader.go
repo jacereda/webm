@@ -4,7 +4,6 @@ import (
 	"code.google.com/p/ebml-go/ebml"
 	"io"
 	"log"
-	"os"
 	"time"
 )
 
@@ -178,24 +177,20 @@ func (r *Reader) parseClusters(elmts *ebml.Element) {
 	for err == nil {
 		var c Cluster
 		var e *ebml.Element
-		log.Println("elmnts", elmts)
 		e, err = elmts.Next()
-		log.Println(e)
 		if err == nil {
 			err = e.Unmarshal(&c)
 		}
 		if err != nil && err.Error() == "Reached payload" {
-			sp := seekpos{time.Duration(c.Timecode), e.Offset}
-			log.Println("sp", sp, e)
+			//			sp := seekpos{time.Duration(c.Timecode), e.Offset}
 			r.sendCluster(err.(ebml.ReachedPayloadError).Element,
 				time.Millisecond*time.Duration(c.Timecode))
 			err = nil
 		}
 		if len(r.seek) != 0 {
-			//			seek := <-r.seek
-			//			elmts.Seek(4096, os.SEEK_SET)
-			elmts.Seek(0, os.SEEK_CUR)
-			log.Println("selements", elmts)
+			<-r.seek
+			//seek := <-r.seek
+			//elmts.Seek(4386, 0)
 		}
 	}
 	close(r.Chan)
