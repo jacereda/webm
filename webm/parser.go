@@ -126,15 +126,15 @@ func (s *SegmentInformation) GetDuration() float64 {
 }
 
 type Cluster struct {
-	simpleBlock []byte       `ebml:"A3" ebmlstop:"1"`
-	Timecode    uint         `ebml:"E7"`
-	PrevSize    uint         `ebml:"AB"`
-	Position    uint         `ebml:"A7"`
-	BlockGroup  []BlockGroup `ebml:"A0"`
+	simpleBlock []byte     `ebml:"A3" ebmlstop:"1"`
+	Timecode    uint       `ebml:"E7"`
+	PrevSize    uint       `ebml:"AB"`
+	Position    uint       `ebml:"A7"`
+	BlockGroup  BlockGroup `ebml:"A0" ebmlstop:"1"`
 }
 
 type BlockGroup struct {
-	block          []byte   `ebml:"A1"`
+	Block          []byte   `ebml:"A1"`
 	BlockDuration  uint     `ebml:"9B"`
 	ReferenceBlock int      `ebml:"FB"`
 	CodecState     []byte   `ebml:"A4"`

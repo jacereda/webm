@@ -116,7 +116,7 @@ func parseEBMLSizes(d []byte) (sz []int, curr int) {
 	return
 }
 
-func (r *Reader) sendBlock(data []byte, tbase time.Duration) {
+func (r *Reader) sendSimpleBlock(data []byte, tbase time.Duration) {
 	var p Packet
 	p.TrackNumber = uint(data[0]) & 0x7f
 	p.Timecode = tbase + time.Millisecond*time.Duration(
@@ -146,25 +146,35 @@ func (r *Reader) sendBlock(data []byte, tbase time.Duration) {
 
 func (r *Reader) sendCluster(elmts *ebml.Element, tbase time.Duration) {
 	var err error
-	curr := 0
 	for err == nil {
 		var e *ebml.Element
 		e, err = elmts.Next()
-		var data []byte
 		if err == nil {
-			data, err = e.ReadData()
-		}
-		if err != nil && err != io.EOF {
-			log.Println(err)
-		}
-		if err == nil {
-			if e.Id == 163 && len(data) > 4 {
-				r.sendBlock(data, tbase)
-			} else {
+			switch e.Id {
+			case 0xa3:
+				var data []byte
+				if err == nil {
+					data, err = e.ReadData()
+				}
+				if err != nil && err != io.EOF {
+					log.Println(err)
+				}
+				if err == nil && len(data) > 4 {
+					r.sendSimpleBlock(data, tbase)
+				}
+			case 0xa0:
+				var bg BlockGroup
+				err = e.Unmarshal(&bg)
+				if err != nil && err != io.EOF {
+					log.Println(err)
+				}
+				if err == nil && len(bg.Block) > 4 {
+					r.sendSimpleBlock(bg.Block, tbase)
+				}
+			default:
 				log.Printf("Unexpected packet %x", e.Id)
 			}
 		}
-		curr++
 	}
 }
 
