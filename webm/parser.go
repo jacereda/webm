@@ -45,7 +45,7 @@ type Header struct {
 }
 
 type Segment struct {
-	cluster            Cluster `ebml:"1F43B675" ebmlstop:"1"`
+	cluster            []Cluster `ebml:"1F43B675" ebmlstop:"1"`
 	SeekHead           `ebml:"114D9B74"`
 	SegmentInformation `ebml:"1549A966"`
 	Tracks             `ebml:"1654AE6B"`
@@ -159,12 +159,12 @@ type CuePoint struct {
 }
 
 type CueTrackPositions struct {
-	CueTrack           uint `ebml:"F7"`
-	CueClusterPosition uint `ebml:"F1"`
-	CueBlockNumber     uint `ebml:"5378" ebmldef:"1"`
+	CueTrack           uint   `ebml:"F7"`
+	CueClusterPosition uint64 `ebml:"F1"`
+	CueBlockNumber     uint   `ebml:"5378" ebmldef:"1"`
 }
 
-func Parse(r io.Reader, m *WebM) (wr *Reader, err error) {
+func Parse(r io.ReadSeeker, m *WebM) (wr *Reader, err error) {
 	var e *ebml.Element
 	e, err = ebml.RootElement(r)
 	if err == nil {
