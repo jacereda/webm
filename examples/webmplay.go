@@ -155,6 +155,16 @@ func factor(t time.Time, tc0 time.Time, tc1 time.Time) gl.Float {
 
 var steps = uint(0xffffffff)
 var seek = time.Duration(-1)
+var duration = time.Duration(-1)
+
+func mbhandler(button, state int) {
+	if state == glfw.KeyRelease {
+		x, _ := glfw.MousePos()
+		w, _ := glfw.WindowSize()
+		factor := float64(x) / float64(w)
+		seek = time.Duration(float64(duration) * factor)
+	}
+}
 
 func khandler(key, state int) {
 	if state == glfw.KeyRelease {
@@ -165,8 +175,6 @@ func khandler(key, state int) {
 			steps = 0xffffffff
 		case 'S':
 			steps = 1
-		case '0':
-			seek = time.Duration(0)
 		}
 	}
 }
@@ -193,6 +201,7 @@ func vpresent(wchan <-chan webm.Frame, reader *webm.Reader) {
 	}
 	glfw.OpenWindow(ww, wh, 0, 0, 0, 0, 0, 0, mode)
 	glfw.SetKeyCallback(khandler)
+	glfw.SetMouseButtonCallback(mbhandler)
 	defer glfw.CloseWindow()
 	glfw.SetWindowSizeCallback(func(ww, wh int) {
 		oaspect := float64(w) / float64(h)
@@ -318,6 +327,8 @@ func main() {
 	if err != nil {
 		log.Panic("Unable to parse file:", err)
 	}
+	duration = time.Duration(wm.GetDuration()) * time.Second
+
 	splitter := webm.NewSplitter(reader.Chan)
 
 	var vtrack *webm.TrackEntry

@@ -178,7 +178,7 @@ func (r *Reader) parseClusters(elmts *ebml.Element) {
 			err = e.Unmarshal(&c)
 		}
 		if err != nil && err.Error() == "Reached payload" {
-			r.index.append(seekEntry{time.Duration(c.Timecode), e.Offset})
+			r.index.append(seekEntry{time.Millisecond * time.Duration(c.Timecode), e.Offset})
 			r.sendCluster(err.(ebml.ReachedPayloadError).Element,
 				time.Millisecond*time.Duration(c.Timecode))
 			err = nil
