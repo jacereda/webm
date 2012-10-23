@@ -26,9 +26,10 @@ const (
 )
 
 type Reader struct {
-	Chan  chan Packet
-	seek  chan time.Duration
-	index seekIndex
+	Chan   chan Packet
+	seek   chan time.Duration
+	index  seekIndex
+	offset int64
 }
 
 func (r *Reader) send(p *Packet) {
@@ -202,10 +203,19 @@ func (r *Reader) parseClusters(elmts *ebml.Element) {
 	close(r.Chan)
 }
 
-func newReader(e *ebml.Element) *Reader {
+func newReader(e *ebml.Element, cuepoints []CuePoint, offset int64) *Reader {
 	r := &Reader{make(chan Packet, 2),
 		make(chan time.Duration, 8),
-		*newSeekIndex()}
+		*newSeekIndex(),
+		offset}
+	//	log.Println("offsets", e.Offset, offset)
+	for i, l := 0, len(cuepoints); i < l; i++ {
+		c := cuepoints[i]
+		r.index.append(seekEntry{
+			time.Millisecond * time.Duration(c.CueTime),
+			offset + c.CueTrackPositions[0].CueClusterPosition,
+		})
+	}
 	go r.parseClusters(e)
 	return r
 }

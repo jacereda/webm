@@ -3,6 +3,7 @@ package webm
 import (
 	"fmt"
 	"github.com/petar/GoLLRB/llrb"
+	"log"
 	"time"
 )
 
@@ -26,6 +27,10 @@ func newSeekIndex() *seekIndex {
 }
 
 func (si *seekIndex) append(se seekEntry) {
+	prev := si.search(se.t)
+	if prev.t == se.t && prev.offset != se.offset {
+		log.Println("Overriding entry", prev, se)
+	}
 	si.t.ReplaceOrInsert(se)
 }
 
