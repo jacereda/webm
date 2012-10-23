@@ -7,6 +7,8 @@ package webm
 import (
 	"code.google.com/p/ebml-go/ebml"
 	"io"
+
+//"log"
 )
 
 type WebM struct {
@@ -49,7 +51,7 @@ type Segment struct {
 	SeekHead           `ebml:"114D9B74"`
 	SegmentInformation `ebml:"1549A966"`
 	Tracks             `ebml:"1654AE6B"`
-	Cues               `ebml:"1C53BB6B"`
+	//	Cues               `ebml:"1C53BB6B"`
 }
 
 type Tracks struct {
@@ -110,7 +112,7 @@ type SeekHead struct {
 
 type Seek struct {
 	SeekID       []byte `ebml:"53AB"`
-	SeekPosition uint64 `ebml:"53AC"`
+	SeekPosition int64  `ebml:"53AC"`
 }
 
 type SegmentInformation struct {
@@ -170,9 +172,42 @@ func Parse(r io.ReadSeeker, m *WebM) (wr *Reader, err error) {
 	if err == nil {
 		err = e.Unmarshal(m)
 		if err != nil && err.Error() == "Reached payload" {
-			wr = newReader(err.(ebml.ReachedPayloadError).Element)
+			segment := err.(ebml.ReachedPayloadError).Element
+			pos := m.CuesPosition()
+			pos = -1 // XXX
+			if pos > 0 {
+				curr, _ := segment.Seek(0, 1)
+				segment.Seek(pos, 0)
+				var cues Cues
+				ebml.Verbose = true
+				e, _ := segment.Next()
+				e.Unmarshal(&cues)
+				ebml.Verbose = false
+				segment.Seek(curr, 0)
+			}
+			wr = newReader(segment)
 			err = nil
 		}
 	}
 	return
 }
+
+func (m *WebM) CuesPosition() int64 {
+	s := m.Segment.SeekHead.Seek
+	for i, l := 0, len(s); i < l; i++ {
+		if s[i].SeekID[0] == 0x1c {
+			return s[i].SeekPosition
+		}
+	}
+	return -1
+}
+
+/*
+func ParseIndex(r io.ReadSeeker, m *WebM) {
+
+	if pos > 0 {
+		e,_ := ebml.RootElement(r)
+		log.Println(e)
+	}
+}
+*/
