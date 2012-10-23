@@ -8,7 +8,7 @@ import (
 	"code.google.com/p/ebml-go/ebml"
 	"io"
 
-//"log"
+	"log"
 )
 
 type WebM struct {
@@ -48,10 +48,10 @@ type Header struct {
 
 type Segment struct {
 	cluster            []Cluster `ebml:"1F43B675" ebmlstop:"1"`
-	SeekHead           `ebml:"114D9B74"`
+	SeekHead           `ebml:"114D9B74" ebmlstop:"1"`
 	SegmentInformation `ebml:"1549A966"`
 	Tracks             `ebml:"1654AE6B"`
-	//	Cues               `ebml:"1C53BB6B"`
+	Cues               `ebml:"1C53BB6B"`
 }
 
 type Tracks struct {
@@ -173,19 +173,22 @@ func Parse(r io.ReadSeeker, m *WebM) (wr *Reader, err error) {
 		err = e.Unmarshal(m)
 		if err != nil && err.Error() == "Reached payload" {
 			segment := err.(ebml.ReachedPayloadError).Element
+			sh, _ := segment.Next()
+			seekoff := sh.Offset
+			sh.Unmarshal(&m.SeekHead)
 			pos := m.CuesPosition()
-			pos = -1 // XXX
 			if pos > 0 {
 				curr, _ := segment.Seek(0, 1)
-				segment.Seek(pos, 0)
-				var cues Cues
-				ebml.Verbose = true
-				e, _ := segment.Next()
-				e.Unmarshal(&cues)
-				ebml.Verbose = false
+				segment.Seek(pos+seekoff, 0)
+				//				ebml.Verbose = true
+				ce, _ := segment.Next()
+				ce.Unmarshal(&m.Segment.Cues)
+				//				ebml.Verbose = false
 				segment.Seek(curr, 0)
 			}
-			wr = newReader(segment)
+			segment.Unmarshal(&m.Segment)
+			payload := err.(ebml.ReachedPayloadError).Element
+			wr = newReader(payload)
 			err = nil
 		}
 	}
