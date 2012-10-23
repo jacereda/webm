@@ -7,8 +7,6 @@ package webm
 import (
 	"code.google.com/p/ebml-go/ebml"
 	"io"
-
-	"log"
 )
 
 type WebM struct {
