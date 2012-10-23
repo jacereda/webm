@@ -154,14 +154,14 @@ type Cues struct {
 }
 
 type CuePoint struct {
-	CueTime           uint                `ebml:"B3"`
+	CueTime           int64               `ebml:"B3"`
 	CueTrackPositions []CueTrackPositions `ebml:"B7"`
 }
 
 type CueTrackPositions struct {
-	CueTrack           uint   `ebml:"F7"`
-	CueClusterPosition uint64 `ebml:"F1"`
-	CueBlockNumber     uint   `ebml:"5378" ebmldef:"1"`
+	CueTrack           uint  `ebml:"F7"`
+	CueClusterPosition int64 `ebml:"F1"`
+	CueBlockNumber     uint  `ebml:"5378" ebmldef:"1"`
 }
 
 func Parse(r io.ReadSeeker, m *WebM) (wr *Reader, err error) {
@@ -172,28 +172,26 @@ func Parse(r io.ReadSeeker, m *WebM) (wr *Reader, err error) {
 		if err != nil && err.Error() == "Reached payload" {
 			segment := err.(ebml.ReachedPayloadError).Element
 			sh, _ := segment.Next()
-			seekoff := sh.Offset
 			sh.Unmarshal(&m.SeekHead)
-			pos := m.CuesPosition()
+			pos := m.cuesPosition()
 			if pos > 0 {
 				curr, _ := segment.Seek(0, 1)
-				segment.Seek(pos+seekoff, 0)
-				//				ebml.Verbose = true
+				segment.Seek(pos+sh.Offset, 0)
 				ce, _ := segment.Next()
 				ce.Unmarshal(&m.Segment.Cues)
-				//				ebml.Verbose = false
 				segment.Seek(curr, 0)
 			}
 			segment.Unmarshal(&m.Segment)
 			payload := err.(ebml.ReachedPayloadError).Element
-			wr = newReader(payload)
+			wr = newReader(payload,
+				m.Segment.Cues.CuePoint, sh.Offset)
 			err = nil
 		}
 	}
 	return
 }
 
-func (m *WebM) CuesPosition() int64 {
+func (m *WebM) cuesPosition() int64 {
 	s := m.Segment.SeekHead.Seek
 	for i, l := 0, len(s); i < l; i++ {
 		if s[i].SeekID[0] == 0x1c {
@@ -202,13 +200,3 @@ func (m *WebM) CuesPosition() int64 {
 	}
 	return -1
 }
-
-/*
-func ParseIndex(r io.ReadSeeker, m *WebM) {
-
-	if pos > 0 {
-		e,_ := ebml.RootElement(r)
-		log.Println(e)
-	}
-}
-*/
