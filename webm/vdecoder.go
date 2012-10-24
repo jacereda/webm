@@ -19,6 +19,7 @@ type VideoDecoder struct {
 	duration time.Duration
 	emitted  uint
 	goodtc   time.Duration
+	rebase   bool
 }
 
 func NewVideoDecoder(track *TrackEntry) *VideoDecoder {
@@ -34,9 +35,25 @@ func (d *VideoDecoder) estimate() time.Duration {
 }
 
 func (d *VideoDecoder) Decode(pkt *Packet) {
+	//	log.Println(pkt.Keyframe)
+	if false {
+		if pkt.Rebase {
+			d.rebase = true
+			log.Println("rebase")
+		}
+		if d.rebase {
+			if pkt.Keyframe {
+				d.dec.Flush()
+				pkt.Rebase = true
+			} else {
+				return
+			}
+		}
+	}
 	img := d.dec.Decode(pkt.Data)
 	if img != nil {
 		frame := Frame{img, pkt.Timecode, pkt.Rebase}
+		d.rebase = false
 		if frame.Timecode == BadTC {
 			frame.Timecode = d.estimate()
 			//			log.Println("bad tc:", frame.Timecode)
