@@ -152,7 +152,7 @@ func (r *Reader) sendSimpleBlock(data []byte, tbase time.Duration) {
 
 func (r *Reader) sendCluster(elmts *ebml.Element, tbase time.Duration) {
 	var err error
-	for err == nil {
+	for err == nil && len(r.seek) == 0 {
 		var e *ebml.Element
 		e, err = elmts.Next()
 		if err == nil {
@@ -215,7 +215,7 @@ func (r *Reader) parseClusters(elmts *ebml.Element) {
 
 func newReader(e *ebml.Element, cuepoints []CuePoint, offset int64) *Reader {
 	r := &Reader{make(chan Packet, 2),
-		make(chan time.Duration, 80),
+		make(chan time.Duration, 4),
 		*newSeekIndex(),
 		offset,
 		^0}
