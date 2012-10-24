@@ -10,6 +10,7 @@ import (
 type Frame struct {
 	*image.YCbCr
 	Timecode time.Duration
+	Rebase   bool
 }
 
 type VideoDecoder struct {
@@ -35,7 +36,7 @@ func (d *VideoDecoder) estimate() time.Duration {
 func (d *VideoDecoder) Decode(pkt *Packet) {
 	img := d.dec.Decode(pkt.Data)
 	if img != nil {
-		frame := Frame{img, pkt.Timecode}
+		frame := Frame{img, pkt.Timecode, pkt.Rebase}
 		if frame.Timecode == BadTC {
 			frame.Timecode = d.estimate()
 			//			log.Println("bad tc:", frame.Timecode)

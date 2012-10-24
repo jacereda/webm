@@ -157,12 +157,22 @@ var steps = uint(0xffffffff)
 var seek = time.Duration(-1)
 var duration = time.Duration(-1)
 
+func xseek(x int) {
+	w, _ := glfw.WindowSize()
+	factor := float64(x) / float64(w)
+	seek = time.Duration(float64(duration) * factor)
+}
+
+func mphandler(x, y int) {
+	if glfw.KeyPress == glfw.MouseButton(glfw.MouseLeft) {
+		xseek(x)
+	}
+}
+
 func mbhandler(button, state int) {
 	if state == glfw.KeyRelease {
 		x, _ := glfw.MousePos()
-		w, _ := glfw.WindowSize()
-		factor := float64(x) / float64(w)
-		seek = time.Duration(float64(duration) * factor)
+		xseek(x)
 	}
 }
 
@@ -202,6 +212,7 @@ func vpresent(wchan <-chan webm.Frame, reader *webm.Reader) {
 	glfw.OpenWindow(ww, wh, 0, 0, 0, 0, 0, 0, mode)
 	glfw.SetKeyCallback(khandler)
 	glfw.SetMouseButtonCallback(mbhandler)
+	glfw.SetMousePosCallback(mphandler)
 	defer glfw.CloseWindow()
 	glfw.SetWindowSizeCallback(func(ww, wh int) {
 		oaspect := float64(w) / float64(h)
@@ -243,6 +254,9 @@ func vpresent(wchan <-chan webm.Frame, reader *webm.Reader) {
 			}
 			if img.Timecode == pimg.Timecode {
 				log.Println("same timecode", img.Timecode)
+			}
+			if img.Rebase {
+				tbase = time.Now().Add(-img.Timecode)
 			}
 			steps--
 		}
