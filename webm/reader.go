@@ -19,13 +19,6 @@ type Packet struct {
 	Rebase      bool
 }
 
-const (
-	cmdNone   = 0
-	cmdPause  = 1
-	cmdResume = 2
-	cmdStep   = 3
-)
-
 type Reader struct {
 	Chan   chan Packet
 	seek   chan time.Duration
