@@ -170,7 +170,7 @@ func mphandler(x, y int) {
 }
 
 func mbhandler(button, state int) {
-	if state == glfw.KeyRelease {
+	if state == glfw.KeyPress {
 		x, _ := glfw.MousePos()
 		xseek(x)
 	}
