@@ -276,7 +276,7 @@ func vpresent(wchan <-chan webm.Frame, reader *webm.Reader) {
 			if !ok {
 				return
 			}
-			if nimg.Timecode == pimg.Timecode {
+			if false && nimg.Timecode == pimg.Timecode {
 				log.Println("same timecode", img.Timecode)
 			}
 			if nimg.Rebase {

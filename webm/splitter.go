@@ -2,8 +2,6 @@ package webm
 
 import (
 	"time"
-
-//"log"
 )
 
 type Splitter struct {
@@ -14,7 +12,7 @@ type Splitter struct {
 
 func (s *Splitter) expect(t time.Duration) {
 	for i := 0; i < MAXSTREAMS; i++ {
-		s.expecting[i] = t
+		s.expecting[i] = t - time.Millisecond
 	}
 }
 
@@ -46,12 +44,14 @@ func (s *Splitter) split() {
 				if pkt.Timecode < expecting {
 					pkt.Invisible = true
 				} else {
-					s.expecting[pkt.TrackNumber] = BadTC
 					pkt.Rebase = true
 				}
 			}
 			if strm != nil {
-				strm.Decoder.Decode(&pkt)
+				sent := strm.Decoder.Decode(&pkt)
+				if expecting != BadTC && sent {
+					s.expecting[pkt.TrackNumber] = BadTC
+				}
 			}
 		}
 	}

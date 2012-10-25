@@ -35,7 +35,8 @@ func (d *AudioDecoder) estimate() time.Duration {
 	return d.goodtc + time.Duration(d.duration*d.emitted)
 }
 
-func (d *AudioDecoder) Decode(pkt *Packet) {
+func (d *AudioDecoder) Decode(pkt *Packet) bool {
+	sent := false
 	data := d.dec.Decode(pkt.Data)
 	if data != nil {
 		smp := Samples{data, pkt.Timecode}
@@ -49,8 +50,10 @@ func (d *AudioDecoder) Decode(pkt *Packet) {
 		d.emitted += len(smp.Data) / d.chans
 		if !pkt.Invisible {
 			d.Chan <- smp
+			sent = true
 		}
 	}
+	return sent
 }
 
 func (d *AudioDecoder) Close() {
