@@ -2,7 +2,6 @@ package webm
 
 import (
 	"code.google.com/p/ffvorbis-go/ffvorbis"
-	"log"
 	"time"
 )
 
