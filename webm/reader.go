@@ -195,7 +195,6 @@ func (r *Reader) parseClusters(elmts *ebml.Element) {
 		}
 		if seek != BadTC {
 			entry := r.index.search(seek)
-			log.Println("seeking to", seek, entry)
 			elmts.Seek(entry.offset, 0)
 			var seekpkt Packet
 			seekpkt.Timecode = seek
