@@ -284,7 +284,9 @@ func vpresent(wchan <-chan webm.Frame, reader *webm.Reader) {
 				flushing = false
 			}
 			if !flushing {
-				steps--
+				if steps > 0 {
+					steps--
+				}
 				img = nimg
 			}
 		}
