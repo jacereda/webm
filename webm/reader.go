@@ -24,8 +24,13 @@ type Reader struct {
 	seek      chan time.Duration
 	index     seekIndex
 	offset    int64
-	rebase    int64
-	expecting time.Duration
+	expecting [MAXSTREAMS]time.Duration
+}
+
+func (r *Reader) expect(t time.Duration) {
+	for i := 0; i < MAXSTREAMS; i++ {
+		r.expecting[i] = t
+	}
 }
 
 func tabs(t time.Duration) time.Duration {
@@ -36,18 +41,15 @@ func tabs(t time.Duration) time.Duration {
 }
 
 func (r *Reader) send(p *Packet) {
-	mask := int64(1) << p.TrackNumber
-	if r.expecting != BadTC {
-		delta := p.Timecode - r.expecting
+	expecting := r.expecting[p.TrackNumber]
+	if expecting != BadTC {
+		delta := p.Timecode - expecting
 		if tabs(delta) > time.Millisecond*time.Duration(30) {
 			p.Invisible = true
 		} else {
-			r.expecting = BadTC
+			r.expecting[p.TrackNumber] = BadTC
+			p.Rebase = true
 		}
-	}
-	if !p.Invisible {
-		p.Rebase = 0 != (r.rebase & mask)
-		r.rebase &= ^mask
 	}
 	r.Chan <- *p
 }
@@ -211,29 +213,26 @@ func (r *Reader) parseClusters(elmts *ebml.Element) {
 				time.Millisecond*time.Duration(c.Timecode))
 			err = nil
 		}
-		noseek := time.Duration(-1)
-		seek := noseek
+		seek := BadTC
 		for len(r.seek) != 0 {
 			seek = <-r.seek
 		}
-		if seek != noseek {
+		if seek != BadTC {
 			entry := r.index.search(seek)
 			log.Println("seeking to", seek, entry)
 			elmts.Seek(entry.offset, 0)
-			r.expecting = seek
-			r.rebase = ^0
+			r.expect(seek)
 		}
 	}
 	close(r.Chan)
 }
 
 func newReader(e *ebml.Element, cuepoints []CuePoint, offset int64) *Reader {
-	r := &Reader{make(chan Packet, 4),
-		make(chan time.Duration, 4),
-		*newSeekIndex(),
-		offset,
-		^0, BadTC}
-	//	log.Println("offsets", e.Offset, offset)
+	r := &Reader{Chan: make(chan Packet, 4),
+		seek:   make(chan time.Duration, 4),
+		index:  *newSeekIndex(),
+		offset: offset}
+	r.expect(BadTC)
 	for i, l := 0, len(cuepoints); i < l; i++ {
 		c := cuepoints[i]
 		r.index.append(seekEntry{
