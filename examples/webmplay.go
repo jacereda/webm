@@ -117,7 +117,8 @@ func upload(id gl.Uint, data []byte, stride int, w int, h int) {
 	gl.BindTexture(gl.TEXTURE_2D, id)
 	gl.PixelStorei(gl.UNPACK_ROW_LENGTH, gl.Int(stride))
 	gl.PixelStorei(gl.UNPACK_ALIGNMENT, 1)
-	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE, gl.Sizei(w), gl.Sizei(h), 0,
+	gl.TexImage2D(gl.TEXTURE_2D, 0, gl.LUMINANCE,
+		gl.Sizei(w), gl.Sizei(h), 0,
 		gl.LUMINANCE, gl.UNSIGNED_BYTE, gl.Pointer(&data[0]))
 }
 

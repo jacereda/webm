@@ -31,7 +31,7 @@ func (si *seekIndex) append(se seekEntry) {
 	if false && prev.t != se.t {
 		log.Println("New entry", se)
 	}
-	if prev.t == se.t && prev.offset != se.offset {
+	if false && prev.t == se.t && prev.offset != se.offset {
 		log.Println("Overriding entry", prev, se)
 	}
 	si.t.ReplaceOrInsert(se)
