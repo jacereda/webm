@@ -3,7 +3,7 @@ package webm
 import ()
 
 type Splitter struct {
-	streams [16]*Stream
+	streams [MAXSTREAMS]*Stream
 	ch      <-chan Packet
 }
 
