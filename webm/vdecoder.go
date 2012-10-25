@@ -34,7 +34,8 @@ func (d *VideoDecoder) estimate() time.Duration {
 	return d.goodtc + time.Duration(d.emitted)*d.duration
 }
 
-func (d *VideoDecoder) Decode(pkt *Packet) {
+func (d *VideoDecoder) Decode(pkt *Packet) bool {
+	sent := false
 	//	log.Println(pkt.Keyframe)
 	if false {
 		if pkt.Rebase {
@@ -46,7 +47,7 @@ func (d *VideoDecoder) Decode(pkt *Packet) {
 				d.dec.Flush()
 				pkt.Rebase = true
 			} else {
-				return
+				return false
 			}
 		}
 	}
@@ -65,8 +66,10 @@ func (d *VideoDecoder) Decode(pkt *Packet) {
 		d.emitted++
 		if !pkt.Invisible {
 			d.Chan <- frame
+			sent = true
 		}
 	}
+	return sent
 }
 
 func (d *VideoDecoder) Close() {

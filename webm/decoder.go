@@ -1,6 +1,6 @@
 package webm
 
 type Decoder interface {
-	Decode(*Packet)
+	Decode(*Packet) bool
 	Close()
 }
