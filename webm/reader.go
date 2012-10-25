@@ -20,17 +20,35 @@ type Packet struct {
 }
 
 type Reader struct {
-	Chan   chan Packet
-	seek   chan time.Duration
-	index  seekIndex
-	offset int64
-	rebase int64
+	Chan      chan Packet
+	seek      chan time.Duration
+	index     seekIndex
+	offset    int64
+	rebase    int64
+	expecting time.Duration
+}
+
+func tabs(t time.Duration) time.Duration {
+	if t < 0 {
+		return -t
+	}
+	return t
 }
 
 func (r *Reader) send(p *Packet) {
 	mask := int64(1) << p.TrackNumber
-	p.Rebase = 0 != (r.rebase & mask)
-	r.rebase &= ^mask
+	if r.expecting != BadTC {
+		delta := p.Timecode - r.expecting
+		if tabs(delta) > time.Millisecond*time.Duration(30) {
+			p.Invisible = true
+		} else {
+			r.expecting = BadTC
+		}
+	}
+	if !p.Invisible {
+		p.Rebase = 0 != (r.rebase & mask)
+		r.rebase &= ^mask
+	}
 	r.Chan <- *p
 }
 
@@ -200,8 +218,9 @@ func (r *Reader) parseClusters(elmts *ebml.Element) {
 		}
 		if seek != noseek {
 			entry := r.index.search(seek)
-			//			log.Println("seeking to", entry)
+			log.Println("seeking to", seek, entry)
 			elmts.Seek(entry.offset, 0)
+			r.expecting = seek
 			r.rebase = ^0
 		}
 	}
@@ -209,11 +228,11 @@ func (r *Reader) parseClusters(elmts *ebml.Element) {
 }
 
 func newReader(e *ebml.Element, cuepoints []CuePoint, offset int64) *Reader {
-	r := &Reader{make(chan Packet, 2),
+	r := &Reader{make(chan Packet, 4),
 		make(chan time.Duration, 4),
 		*newSeekIndex(),
 		offset,
-		^0}
+		^0, BadTC}
 	//	log.Println("offsets", e.Offset, offset)
 	for i, l := 0, len(cuepoints); i < l; i++ {
 		c := cuepoints[i]

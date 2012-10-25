@@ -154,8 +154,10 @@ func factor(t time.Time, tc0 time.Time, tc1 time.Time) gl.Float {
 }
 
 var steps = uint(0xffffffff)
-var seek = time.Duration(-1)
-var duration = time.Duration(-1)
+var seek = webm.BadTC
+var duration = webm.BadTC
+var lasttc = webm.BadTC
+var fduration = webm.BadTC
 
 func xseek(x int) {
 	w, _ := glfw.WindowSize()
@@ -183,8 +185,13 @@ func khandler(key, state int) {
 			steps = 0
 		case 'R':
 			steps = 0xffffffff
-		case 'S':
+			seek = lasttc
+		case 'F':
 			steps = 1
+			seek = lasttc + fduration
+		case 'B':
+			steps = 1
+			seek = lasttc - fduration
 		}
 	}
 }
@@ -242,24 +249,39 @@ func vpresent(wchan <-chan webm.Frame, reader *webm.Reader) {
 	gl.Enable(gl.TEXTURE_2D)
 	tbase := time.Now()
 	pimg := img
+
+	flushing := false
 	for glfw.WindowParam(glfw.Opened) == 1 {
+		if seek != webm.BadTC {
+			reader.Seek(seek)
+			seek = webm.BadTC
+			flushing = true
+		}
+
 		gl.Clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
 		t := time.Now()
-		if steps > 0 && (*notc || t.After(tbase.Add(img.Timecode))) {
+		if flushing || (steps > 0 && (*notc || t.After(tbase.Add(img.Timecode)))) {
 			pimg = img
 			var ok bool
-			img, ok = <-wchan
+			var nimg webm.Frame
+			nimg, ok = <-wchan
 			if !ok {
 				return
 			}
-			if img.Timecode == pimg.Timecode {
+			if nimg.Timecode == pimg.Timecode {
 				log.Println("same timecode", img.Timecode)
 			}
-			if img.Rebase {
-				tbase = time.Now().Add(-img.Timecode)
+			if nimg.Rebase {
+				tbase = time.Now().Add(-nimg.Timecode)
+				flushing = false
 			}
-			steps--
+			if !flushing {
+				steps--
+				img = nimg
+			}
 		}
+		lasttc = img.Timecode
+
 		gl.ActiveTexture(gl.TEXTURE0)
 		upload(1, img.Y, img.YStride, w, h)
 		gl.ActiveTexture(gl.TEXTURE1)
@@ -279,10 +301,6 @@ func vpresent(wchan <-chan webm.Frame, reader *webm.Reader) {
 		}
 		gl.DrawArrays(gl.TRIANGLE_STRIP, 0, 4)
 		runtime.GC()
-		if seek >= 0 {
-			reader.Seek(seek)
-			seek = time.Duration(-1)
-		}
 		glfw.SwapBuffers()
 	}
 }
@@ -341,7 +359,7 @@ func main() {
 	if err != nil {
 		log.Panic("Unable to parse file:", err)
 	}
-	duration = time.Duration(wm.GetDuration()) * time.Second
+	duration = wm.GetDuration()
 
 	splitter := webm.NewSplitter(reader.Chan)
 
@@ -349,6 +367,7 @@ func main() {
 	var vstream *webm.Stream
 	if !*justaudio {
 		vtrack = wm.FindFirstVideoTrack()
+		fduration = vtrack.GetDefaultDuration()
 	}
 	if vtrack != nil {
 		vstream = webm.NewStream(vtrack)

@@ -7,6 +7,7 @@ package webm
 import (
 	"code.google.com/p/ebml-go/ebml"
 	"io"
+	"time"
 )
 
 type WebM struct {
@@ -74,6 +75,10 @@ type TrackEntry struct {
 	Audio           `ebml:"E1"`
 }
 
+func (t *TrackEntry) GetDefaultDuration() time.Duration {
+	return time.Duration(t.DefaultDuration)
+}
+
 func (t *TrackEntry) IsVideo() bool {
 	return t.TrackType == 1
 }
@@ -121,8 +126,9 @@ type SegmentInformation struct {
 	WritingApp    string  `ebml:"5741"`
 }
 
-func (s *SegmentInformation) GetDuration() float64 {
-	return s.Duration * float64(s.TimecodeScale) / 1000000000
+func (s *SegmentInformation) GetDuration() time.Duration {
+	return time.Second * time.Duration(
+		s.Duration*float64(s.TimecodeScale)/1000000000)
 }
 
 type Cluster struct {
