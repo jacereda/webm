@@ -65,8 +65,6 @@ func (d *VideoDecoder) Decode(pkt *Packet) {
 		d.emitted++
 		if !pkt.Invisible {
 			d.Chan <- frame
-		} else {
-			log.Println("Invisible video packet")
 		}
 	}
 }
