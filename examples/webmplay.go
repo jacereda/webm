@@ -159,10 +159,17 @@ var duration = webm.BadTC
 var lasttc = webm.BadTC
 var fduration = webm.BadTC
 
+func tseek(t time.Duration) {
+	seek = t
+	if seek < 0 {
+		seek = 0
+	}
+}
+
 func xseek(x int) {
 	w, _ := glfw.WindowSize()
 	factor := float64(x) / float64(w)
-	seek = time.Duration(float64(duration) * factor)
+	tseek(time.Duration(float64(duration) * factor))
 }
 
 func mphandler(x, y int) {
@@ -185,13 +192,13 @@ func khandler(key, state int) {
 			steps = 0
 		case 'R':
 			steps = 0xffffffff
-			seek = lasttc
+			tseek(lasttc)
 		case 'F':
 			steps = 1
-			seek = lasttc + fduration
+			tseek(lasttc + fduration)
 		case 'B':
 			steps = 1
-			seek = lasttc - fduration
+			tseek(lasttc - fduration)
 		}
 	}
 }
