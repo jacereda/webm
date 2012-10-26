@@ -6,6 +6,7 @@ package webm
 
 import (
 	"code.google.com/p/ebml-go/ebml"
+	"errors"
 	"io"
 	"time"
 )
@@ -175,6 +176,9 @@ func Parse(r io.ReadSeeker, m *WebM) (wr *Reader, err error) {
 	e, err = ebml.RootElement(r)
 	if err == nil {
 		err = e.Unmarshal(m)
+		if m.Header.DocType != "webm" {
+			err = errors.New("Not a WebM file")
+		}
 		if err != nil && err.Error() == "Reached payload" {
 			segment := err.(ebml.ReachedPayloadError).Element
 			sh, _ := segment.Next()
