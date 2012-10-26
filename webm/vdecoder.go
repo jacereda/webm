@@ -3,7 +3,6 @@ package webm
 import (
 	"code.google.com/p/ffvp8-go/ffvp8"
 	"image"
-	"log"
 	"time"
 )
 
@@ -11,6 +10,7 @@ type Frame struct {
 	*image.YCbCr
 	Timecode time.Duration
 	Rebase   bool
+	EOS      bool
 }
 
 type VideoDecoder struct {
@@ -40,7 +40,6 @@ func (d *VideoDecoder) Decode(pkt *Packet) bool {
 	if false {
 		if pkt.Rebase {
 			d.rebase = true
-			log.Println("rebase")
 		}
 		if d.rebase {
 			if pkt.Keyframe {
@@ -51,9 +50,15 @@ func (d *VideoDecoder) Decode(pkt *Packet) bool {
 			}
 		}
 	}
-	img := d.dec.Decode(pkt.Data)
+	var img *image.YCbCr
+	if pkt.Data == nil {
+		eos := Frame{nil, BadTC, false, true}
+		d.Chan <- eos
+	} else {
+		img = d.dec.Decode(pkt.Data)
+	}
 	if img != nil {
-		frame := Frame{img, pkt.Timecode, pkt.Rebase}
+		frame := Frame{img, pkt.Timecode, pkt.Rebase, false}
 		d.rebase = false
 		if frame.Timecode == BadTC {
 			frame.Timecode = d.estimate()

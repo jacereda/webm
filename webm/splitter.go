@@ -35,8 +35,16 @@ func tabs(t time.Duration) time.Duration {
 
 func (s *Splitter) split() {
 	for pkt := range s.ch {
-		if pkt.TrackNumber == MAXSTREAMS {
-			s.expect(pkt.Timecode)
+		if pkt.Data == nil {
+			if pkt.Timecode == BadTC {
+				for _, strm := range s.streams {
+					if strm != nil {
+						strm.Decoder.Decode(&pkt)
+					}
+				}
+			} else {
+				s.expect(pkt.Timecode)
+			}
 		} else {
 			strm := s.streams[pkt.TrackNumber]
 			expecting := s.expecting[pkt.TrackNumber]

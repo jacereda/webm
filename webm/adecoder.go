@@ -9,6 +9,7 @@ type Samples struct {
 	Data     []float32
 	Timecode time.Duration
 	Rebase   bool
+	EOS      bool
 }
 
 type AudioDecoder struct {
@@ -38,13 +39,19 @@ func (d *AudioDecoder) estimate() time.Duration {
 
 func (d *AudioDecoder) Decode(pkt *Packet) bool {
 	sent := false
-	data := d.dec.Decode(pkt.Data)
+	var data []float32
+	if pkt.Data == nil {
+		eos := Samples{nil, BadTC, false, true}
+		d.Chan <- eos
+	} else {
+		data = d.dec.Decode(pkt.Data)
+	}
 	if data != nil {
-		smp := Samples{data, pkt.Timecode, pkt.Rebase}
+		smp := Samples{data, pkt.Timecode, pkt.Rebase, false}
 		if smp.Timecode == BadTC {
 			smp.Timecode = d.estimate()
 		} else {
-			//			log.Println("good tc:", smp.Timecode - d.estimate(), d.duration)
+			// log.Println("good tc:", smp.Timecode - d.estimate(), d.duration)
 			d.goodtc = smp.Timecode
 			d.emitted = 0
 		}
