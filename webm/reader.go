@@ -193,12 +193,20 @@ func (r *Reader) parseClusters(elmts *ebml.Element) {
 		for len(r.seek) != 0 {
 			seek = <-r.seek
 		}
+		if err == io.EOF {
+			var eofpkt Packet
+			eofpkt.Timecode = BadTC
+			r.send(&eofpkt)
+			seek = <-r.seek
+			if seek != BadTC {
+				err = nil
+			}
+		}
 		if seek != BadTC {
 			entry := r.index.search(seek)
 			elmts.Seek(entry.offset, 0)
 			var seekpkt Packet
 			seekpkt.Timecode = seek
-			seekpkt.TrackNumber = MAXSTREAMS
 			r.send(&seekpkt)
 		}
 	}
@@ -221,4 +229,8 @@ func newReader(e *ebml.Element, cuepoints []CuePoint, offset int64) *Reader {
 
 func (r *Reader) Seek(t time.Duration) {
 	r.seek <- t
+}
+
+func (r *Reader) Shutdown() {
+	r.seek <- BadTC
 }
