@@ -51,7 +51,6 @@ func (d *AudioDecoder) Decode(pkt *Packet) bool {
 		if smp.Timecode == BadTC {
 			smp.Timecode = d.estimate()
 		} else {
-			// log.Println("good tc:", smp.Timecode - d.estimate(), d.duration)
 			d.goodtc = smp.Timecode
 			d.emitted = 0
 		}

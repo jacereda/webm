@@ -7,7 +7,10 @@ import (
 	"time"
 )
 
-const BadTC = time.Duration(-1000000000000000)
+const (
+	BadTC    = time.Duration(-1000000000000000)
+	shutdown = 2 * BadTC
+)
 
 type Packet struct {
 	Data        []byte
@@ -209,6 +212,9 @@ func (r *Reader) parseClusters(elmts *ebml.Element) {
 			seekpkt.Timecode = seek
 			r.send(&seekpkt)
 		}
+		if seek == shutdown {
+			err = io.EOF
+		}
 	}
 	close(r.Chan)
 }
@@ -232,5 +238,5 @@ func (r *Reader) Seek(t time.Duration) {
 }
 
 func (r *Reader) Shutdown() {
-	r.seek <- BadTC
+	r.seek <- shutdown
 }
