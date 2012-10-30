@@ -176,7 +176,8 @@ func Parse(r io.ReadSeeker, m *WebM) (wr *Reader, err error) {
 	e, err = ebml.RootElement(r)
 	if err == nil {
 		err = e.Unmarshal(m)
-		if m.Header.DocType != "webm" {
+		dt := m.Header.DocType
+		if dt != "webm" && dt != "webm\000" {
 			err = errors.New("Not a WebM file")
 		}
 		if err != nil && err.Error() == "Reached payload" {
