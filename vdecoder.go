@@ -1,7 +1,7 @@
 package webm
 
 import (
-	"github.com/jacereda/ffvp8-go/ffvp8"
+	"github.com/jacereda/ffvp8"
 	"image"
 	"time"
 )

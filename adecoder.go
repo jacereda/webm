@@ -1,7 +1,7 @@
 package webm
 
 import (
-	"github.com/jacereda/ffvorbis-go/ffvorbis"
+	"github.com/jacereda/ffvorbis"
 	"time"
 )
 

@@ -1,7 +1,7 @@
 package webm
 
 import (
-	"github.com/jacereda/ebml-go/ebml"
+	"github.com/jacereda/ebml"
 	"io"
 	"log"
 	"time"
