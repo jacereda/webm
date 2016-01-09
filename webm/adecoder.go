@@ -1,7 +1,7 @@
 package webm
 
 import (
-	"code.google.com/p/ffvorbis-go/ffvorbis"
+	"github.com/jacereda/ffvorbis-go/ffvorbis"
 	"time"
 )
 
@@ -25,8 +25,8 @@ func NewAudioDecoder(track *TrackEntry) *AudioDecoder {
 	return &AudioDecoder{
 		Chan: make(chan Samples, 4),
 		dec: ffvorbis.NewDecoder(track.CodecPrivate,
-			int(track.SamplingFrequency),
-			int(track.Channels)),
+			int(track.Channels),
+			int(track.SamplingFrequency)),
 		duration: int(time.Duration(time.Second) /
 			time.Duration(track.Audio.SamplingFrequency)),
 		chans: int(track.Channels),

@@ -12,18 +12,20 @@ type seekEntry struct {
 	offset int64
 }
 
+func (se seekEntry) Less(se2 llrb.Item) bool {
+	return se.t < se2.(seekEntry).t
+}
+
 func (se seekEntry) String() string {
 	return fmt.Sprintf("{%v %v}", se.t, se.offset)
 }
 
 type seekIndex struct {
-	t llrb.Tree
+	t llrb.LLRB
 }
 
 func newSeekIndex() *seekIndex {
-	return &seekIndex{*llrb.New(func(a, b interface{}) bool {
-		return a.(seekEntry).t > b.(seekEntry).t
-	})}
+	return &seekIndex{*llrb.New()}
 }
 
 func (si *seekIndex) append(se seekEntry) {
